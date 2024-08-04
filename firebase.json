@@ -1,0 +1,25 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "runtime": "python311",
+      "codebase": "default",
+      "ignore": [
+        "venv",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "firebase.json",
+        "*.local",
+        "**/__pycache__/**",
+        "functions/__pycache__/**",
+        "functions/fn_imports/__pycache__/**",
+        "**/.*"
+      ]
+    }
+  ]
+}
