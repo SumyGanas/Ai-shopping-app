@@ -71,11 +71,10 @@ node_modules/
 venv
 .venv
 mock_data
-prefs_mock_data
-td_mock_data
 function_key
 service_account
 *.local
 *.env
 *.json
 *.pyc
+*.local.txt
