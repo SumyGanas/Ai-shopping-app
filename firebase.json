@@ -18,7 +18,9 @@
         "**/__pycache__/**",
         "functions/__pycache__/**",
         "functions/fn_imports/__pycache__/**",
-        "**/.*"
+        "**/.*",
+        "tests/",
+        "tests/*"
       ]
     }
   ]

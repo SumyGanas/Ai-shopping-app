@@ -1,24 +1,26 @@
 import requests
-from firebase_functions import scheduler_fn
+
 form_data = {
-    'skin_types': 'Dry',
-    'skin_concerns': 'Redness and/or Wrinkles',
-    'hair_types': 'Curly',
-    'hair_concerns': 'Damaged and/or Frizzy',
-    'makeup_preferences': 'Light/Daily'
+    "skin_types": "Dry",
+    "skin_concerns": "Redness and/or Wrinkles",
+    "hair_types": "Straight",
+    "hair_concerns": "Damaged and/or Frizzy",
+    "makeup_preferences": "Light/Daily"
 }
 
-# db_url = "https://databasecleanup-dy3kdkbuyq-uc.a.run.app"
-# ai_url = 'https://receive-query-dy3kdkbuyq-uc.a.run.app'
-
-# #ai_response = requests.post(ai_url, data=form_data, timeout=30)
-# #print(ai_response.content)
-# headers = {
-#     'User-Agent': 'Google-Cloud-Scheduler',
-# }
+#form_data = {"todays_deals" : "todays_deals"}
 
 
-# db_response = requests.post(db_url, json={})
+#cloud_function_url = "https://receive-query-dy3kdkbuyq-uc.a.run.app"
+firebase_emulator_url = "http://127.0.0.1:5001/alpine-figure-414421/us-central1/receive_query"
+#local_host_url = "http://localhost:8080"
 
-# print('Status Code:', db_response.status_code)
-# print('Response Data:', db_response.text)
+header = {"Content-Type": "application/json"}
+ai_response = requests.post(firebase_emulator_url, json=form_data, timeout=30, headers=header)
+print(ai_response.text, ai_response.status_code)
+
+# curl -X POST http://localhost:8080 -H "Content-Type: application/json" -d '{"test" : "test"}'
+# curl -X POST http://127.0.0.1:5001/alpine-figure-414421/us-central1/receive_query -H "Content-Type: application/json" -d '{"test" : "test"}'
+# curl -X POST http://127.0.0.1:5001/alpine-figure-414421/us-central1/receive_query -H "Content-Type: application/json" -d '{"skin_types": "Oily", "skin_concerns": "Acne and/or Dark Spots", "hair_types": "Straight", "hair_concerns": "Damaged and/or Frizzy", "makeup_preferences": "Light/Daily"}'
+
+#  Request to function failed: Error: socket hang up  > [ERROR] Worker (pid:50034) was sent SIGKILL! Perhaps out of memory?
