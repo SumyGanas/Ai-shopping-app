@@ -69,6 +69,7 @@ node_modules/
 .dataconnect
 
 venv
+.venv
 mock_data
 function_key
 service_account
