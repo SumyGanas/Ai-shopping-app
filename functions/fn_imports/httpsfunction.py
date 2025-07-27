@@ -1,45 +1,59 @@
 """HTTPS function module"""
 import logging
+import json
 from firebase_functions import https_fn, options
+from firebase_functions.options import MemoryOption
 from . import ai
 from . import database_config
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-@https_fn.on_request(max_instances=1, cors=options.CorsOptions(cors_origins="*", cors_methods=["get", "post"]))
+@https_fn.on_request(
+        max_instances=1, cors=options.CorsOptions(cors_origins="*", cors_methods=["get", "post"]), timeout_sec=30, memory=MemoryOption.MB_512
+       )
 def receive_query(req: https_fn.Request) -> https_fn.Response:
     """Receives a query for the firestore DB or the AI and returns the response"""
-    logger.info("https running")
-    data = req.form
-    skin_types_field = data.get('skin_types')
-    skin_concerns_field = data.get('skin_concerns')
-    hair_types_field = data.get('hair_types')
-    hair_concerns_field = data.get('hair_concerns')
-    makeup_preferences_field = data.get('makeup_preferences')
-    todays_deals_field = data.get('todays_deals')
+    
+    data = req.get_json()
+    ai_resp = None
 
-    if todays_deals_field is None:
-        query = (skin_types_field, skin_concerns_field, hair_types_field,
-                hair_concerns_field, makeup_preferences_field)
-        query_str = str(query)
-        cached_response = database_config.check_if_cached(query_str)
-        if cached_response is False:
-            ai_bot = ai.AiBot()
-            promos = database_config.read_promos()
-            ai_resp = ai_bot.get_best_deals(query, promos)
-            database_config.add_data(query, ai_resp)
+    try:
+        query = data["todays_deals"]
+        deal_type = "todays_deals"
+    except KeyError:
+        try:
+            query = (data['skin_types'], data['skin_concerns'], data['hair_types'],
+                    data['hair_concerns'], data['makeup_preferences'])
+            deal_type = "preferred_deals"
+        except KeyError as exc:
+            raise RuntimeError("Unknown Query") from exc
+
+    cached_response = database_config.check_if_cached(str(query))
+
+    if not cached_response:
+        logger.info("not cached")
+        ai_bot = ai.AiBot()
+        promos = database_config.read_promos()
+        if deal_type == "todays_deals":
+            gemini_resp = ai_bot.get_top_deals(promos)
+            logger.info(gemini_resp)
+            resp = ai_bot.validate_response_schema(gemini_resp, "td")
+
+        elif deal_type == "preferred_deals":
+            gemini_resp = ai_bot.get_pref_deals(promos, query)
+            resp = ai_bot.validate_response_schema(gemini_resp, "prefs")
+        if resp is False:
+            ai_resp = None
         else:
-            ai_resp = cached_response
-        return https_fn.Response(ai_resp)
+            database_config.add_data(query, json.dumps(gemini_resp))
+            ai_resp = database_config.check_if_cached(str(query))
     else:
-        query = "today_deals"
-        cached_response = database_config.check_if_cached(query)
-        if cached_response is False:
-            ai_bot = ai.AiBot()
-            promos = database_config.read_promos()
-            ai_resp = ai_bot.current_best_deals(promos)
-            database_config.add_data(query, ai_resp)
-        else:
-            ai_resp = cached_response
-        return https_fn.Response(ai_resp)
+        logger.info("cached")
+        ai_resp = cached_response
+
+
+
+    if ai_resp is None:
+        return https_fn.Response("Error: No AI response generated", status=500)
+    return https_fn.Response(ai_resp, status=200)

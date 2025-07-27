@@ -67,3 +67,12 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+venv
+mock_data
+function_key
+service_account
+*.local
+*.env
+*.json
+*.pyc

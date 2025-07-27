@@ -1,7 +1,7 @@
 """Firestore config"""
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from firebase_admin import firestore, db, credentials
 import firebase_admin
 from google.cloud import storage
@@ -10,7 +10,7 @@ from . import web_scraper
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-cred = credentials.Certificate("service_account.json")
+cred = credentials.ApplicationDefault()
 app = firebase_admin.initialize_app(cred)
 db = firestore.client()
 
@@ -72,7 +72,7 @@ def check_if_cached(query: str):
     Returns data if true, or stores it and returns it if false.
     """
     #check if it is cached
-    document_date = str(datetime.today()).split()[0]
+    document_date = str(datetime.now(timezone.utc)).split()[0]
 
     doc_ref = db.collection(COLLECTION_NAME).document(document_date)
     doc = doc_ref.get()
@@ -81,13 +81,13 @@ def check_if_cached(query: str):
         doc_data = doc.to_dict()
         if query in doc_data:
             return doc_data[query]
-        return False
+    else:
+        default_data = {
+            'created_at': datetime.now(timezone.utc),
+            query: {}
+        }
+        doc_ref.set(default_data)
 
-    default_data = {
-        'created_at': datetime.now(),
-        query: {}
-    }
-    doc_ref.set(default_data)
     return False
 
 def add_data(query: tuple[str], resp: str):
@@ -95,7 +95,7 @@ def add_data(query: tuple[str], resp: str):
     adds new query data to the database collection in today's document
     """
     key = str(query)
-    document_date = str(datetime.today()).split()[0]
+    document_date = str(datetime.now(timezone.utc)).split()[0]
     doc_ref = db.collection(COLLECTION_NAME).document(document_date)
 
     data = {
@@ -108,7 +108,7 @@ def delete_old_data():
     """
     Deletes old firestore data 
     """
-    today = datetime.today()
+    today = datetime.now(timezone.utc)
     yesterday = today - timedelta(days=1)
     yesterday_date_str = yesterday.strftime('%Y-%m-%d')
 
@@ -124,7 +124,7 @@ def delete_old_data():
 
 def test_firestore_conn():
     """testing firestore database connectivity"""
-    document_date = str(datetime.today()).split()[0]
+    document_date = str(datetime.now(timezone.utc)).split()[0]
     doc_ref = db.collection(COLLECTION_NAME).document(document_date)
     doc = doc_ref.get()
     if doc.exists:
