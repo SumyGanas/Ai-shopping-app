@@ -9,8 +9,6 @@
       "runtime": "python313",
       "codebase": "default",
       "ignore": [
-        "venv",
-        ".venv",
         ".git",
         ".env",
         "firebase-debug.log",
