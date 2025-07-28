@@ -1,11 +1,10 @@
 import uuid
 import pytest
 from google.cloud import storage
-from functions.fn_imports.cloud_storage import write_promos, read_promos
+from fn_imports.cloud_storage import write_promos, read_promos
 
 TEST_BUCKET_NAME = "ai_port_test"
 
-@pytest.mark.integration
 def test_write_and_read_promos_using_file():
     test_blob_name = f"test-promo-blob-{uuid.uuid4()}"
 
@@ -15,7 +14,7 @@ def test_write_and_read_promos_using_file():
     write_promos(
         bucket_name_override=TEST_BUCKET_NAME,
         blob_name_override=test_blob_name,
-        content_override=test_data
+        contents_override=test_data
     )
 
     result = read_promos(

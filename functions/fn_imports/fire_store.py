@@ -1,9 +1,15 @@
 import logging
-from datetime import datetime, timedelta, timezone
+from firebase_admin import firestore, credentials
+import firebase_admin
 from firebase_admin import db
+from datetime import datetime, timedelta, timezone
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+cred = credentials.ApplicationDefault()
+app = firebase_admin.initialize_app(cred)
+db = firestore.client()
 
 COLLECTION_NAME = "ai_data_cache"
 
@@ -36,7 +42,6 @@ def add_data(query: tuple[str], resp: str):
     key = str(query)
     document_date = str(datetime.now(timezone.utc)).split()[0]
     doc_ref = db.collection(COLLECTION_NAME).document(document_date)
-
     data = {
     key : resp,
     }

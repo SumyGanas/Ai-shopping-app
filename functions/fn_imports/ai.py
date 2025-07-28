@@ -1,20 +1,14 @@
 """Module to connect to gemini API"""
-import logging
-import os
-import re
-import json
+import logging, os, re, json
 from google import genai
-from google.genai import types
-from dotenv import load_dotenv
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-load_dotenv(dotenv_path="../.env") 
 
 class AiBot():
     """Bot"""
     def __init__(self):
-        self.api_key = os.getenv("GEMINI_API_KEY")
+        self.api_key = os.environ.get("GEMINI_API_KEY")
         self.pref_schema = {
     "type": "object",
     "properties": {
