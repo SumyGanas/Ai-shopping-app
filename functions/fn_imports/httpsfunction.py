@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 @https_fn.on_request(
-        max_instances=1, cors=options.CorsOptions(cors_origins="*", cors_methods=["get", "post"]), timeout_sec=30, memory=MemoryOption.MB_512
+        max_instances=1, cors=options.CorsOptions(cors_origins="*", cors_methods=["get", "post", "options"]), timeout_sec=50, memory=MemoryOption.MB_512
        )
 def receive_query(req: https_fn.Request) -> https_fn.Response:
     """Receives a query for the firestore DB or the AI and returns the response"""
@@ -33,7 +33,6 @@ def receive_query(req: https_fn.Request) -> https_fn.Response:
     cached_response = fire_store.check_if_cached(str(query))
 
     if not cached_response:
-        logger.info("not cached")
         ai_bot = ai.AiBot()
         promos = cloud_storage.read_promos()
         if deal_type == "todays_deals":
@@ -50,7 +49,6 @@ def receive_query(req: https_fn.Request) -> https_fn.Response:
             fire_store.add_data(query, json.dumps(gemini_resp))
             ai_resp = fire_store.check_if_cached(str(query))
     else:
-        logger.info("cached")
         ai_resp = cached_response
 
 
