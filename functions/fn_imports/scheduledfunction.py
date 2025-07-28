@@ -4,6 +4,7 @@ import logging
 from firebase_functions import scheduler_fn
 from firebase_functions.options import MemoryOption
 from . import cloud_storage
+from . import fire_store
 
 
 logging.basicConfig(level=logging.INFO)
@@ -15,6 +16,6 @@ def databasecleanup(event: scheduler_fn.ScheduledEvent) -> None:
     logger.info("Cleanup running")
     cloud_storage.write_promos()
     time.sleep(60)
-    cloud_storage.delete_old_data()
+    fire_store.delete_old_data()
     logger.info("Cleanup finished")
 

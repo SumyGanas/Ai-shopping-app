@@ -5,6 +5,7 @@ from firebase_functions import https_fn, options
 from firebase_functions.options import MemoryOption
 from . import ai
 from . import cloud_storage
+from . import fire_store
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,7 +30,7 @@ def receive_query(req: https_fn.Request) -> https_fn.Response:
         except KeyError as exc:
             raise RuntimeError("Unknown Query") from exc
 
-    cached_response = cloud_storage.check_if_cached(str(query))
+    cached_response = fire_store.check_if_cached(str(query))
 
     if not cached_response:
         logger.info("not cached")
@@ -46,8 +47,8 @@ def receive_query(req: https_fn.Request) -> https_fn.Response:
         if resp is False:
             ai_resp = None
         else:
-            cloud_storage.add_data(query, json.dumps(gemini_resp))
-            ai_resp = cloud_storage.check_if_cached(str(query))
+            fire_store.add_data(query, json.dumps(gemini_resp))
+            ai_resp = fire_store.check_if_cached(str(query))
     else:
         logger.info("cached")
         ai_resp = cached_response
