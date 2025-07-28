@@ -3,126 +3,25 @@ import os
 import json
 import pytest
 from jsonschema import validate, ValidationError
-import google.generativeai as genai
+from google import genai
+from google.genai import types
+from dotenv import load_dotenv
+from functions.fn_imports.ai import AiBot
 
+load_dotenv() 
 with open("./test_promos.txt","r", encoding="utf-8") as file:
     promos = file.read()
 
-prefs_schema = {
-    "type": "object",
-    "properties": {
-        "makeup": {
-            "type": "array",
-            "minItems": 3,
-            "maxItems": 3,
-            "items": {
-                "type": "object",
-                "properties": {
-                    "product_name": {"type": "string"},
-                    "product_relevance_for_customer": {"type": "string"},
-                    "product_link": {"type": "string"},
-                    "product_original_price": {"type": "string"},
-                    "product_sale_price": {"type": "string"}
-                },
-                "required": [
-                    "product_name",
-                    "product_relevance_for_customer",
-                    "product_link",
-                    "product_original_price",
-                    "product_sale_price"
-                ]
-            }
-        },
-        "skincare": {
-            "type": "array",
-            "minItems": 3,
-            "maxItems": 3,
-            "items": {
-                "type": "object",
-                "properties": {
-                    "product_name": {"type": "string"},
-                    "product_relevance_for_customer": {"type": "string"},
-                    "product_link": {"type": "string"},
-                    "product_original_price": {"type": "string"},
-                    "product_sale_price": {"type": "string"}
-                },
-                "required": [
-                    "product_name",
-                    "product_relevance_for_customer",
-                    "product_link",
-                    "product_original_price",
-                    "product_sale_price"
-                ]
-            }
-        },
-        "hair": {
-            "type": "array",
-            "minItems": 3,
-            "maxItems": 3,
-            "items": {
-                "type": "object",
-                "properties": {
-                    "product_name": {"type": "string"},
-                    "product_relevance_for_customer": {"type": "string"},
-                    "product_link": {"type": "string"},
-                    "product_original_price": {"type": "string"},
-                    "product_sale_price": {"type": "string"}
-                },
-                "required": [
-                    "product_name",
-                    "product_relevance_for_customer",
-                    "product_link",
-                    "product_original_price",
-                    "product_sale_price"
-                ]
-            }
-        }
-    },
-    "required": ["makeup", "skincare", "hair"]
-}
+ai_bot = AiBot()
 
-deals_schema = {
-            "type": "object",
-            "deals": {
-                "type": "array",
-                "minItems":10,
-                "maxItems":10,
-                "properties": {
-                    "product_name": {"type": "string"},
-                    "product_link": {"type": "string"},
-                    "product_original_price": {"type": "string"},
-                    "product_sale_price": {"type": "string"},
-                    "deal_analysis": {"type": "string"}
-                },
-                "required": ["product_name", "product_link", "product_original_price", "product_sale_price", "deal_analysis"]
-            },
-            "required": ["deals"]
-        }
-
-def make_gemini_request(prompt, model_name="gemini-1.5-flash"):
-    """Makes a request to the Gemini API and returns the JSON response."""
-    model = genai.GenerativeModel(model_name, generation_config={
-        "response_mime_type": "application/json",
-    })
-    genai.configure(api_key=os.environ.get('API_KEY'))
-    response = model.generate_content(prompt)
-    return json.loads(response.text)
-
-@pytest.fixture
-def gemini_prefs_response():
+def test_gemini_prefs_response():
     """Prompt based on user query and promotions"""
-    query = ["oily", "sensitive", "curly", "long", "natural"]
-    pref = f"a customer who has {query[0]} skin with {query[1]}, {query[2]} hair that is {query[3]}, and likes a {query[4]} makeup look"
-    prompt = f"As a beauty expert, recommend the top 3 products from the categories makeup, skincare, and haircare from Ulta for {pref}. Use the given list of discounts and promotions: ({promos}). For each category, provide: products' names, why each product is relevant for the customer's preferences, products' link, original prices, and sale prices excluding kit and value prices. Use the json schema: {prefs_schema}"
-    
-    return make_gemini_request(prompt)
+    query = ("oily", "sensitive", "curly", "long", "natural")
+    return ai_bot.get_pref_deals(promos, query)
 
-@pytest.fixture
-def gemini_deals_response():
+def test_gemini_deals_response():
     """Prompt based on deals"""
-    prompt = f"As a savings expert, identify the top 10 best deals from the provided list of promotions: {promos}. Analyze the discounts excluding kit prices and value prices, gifts with purchase, and other promotions to find a brief reason why this deal is worth purchasing. Also provide the original and sale prices, and the product link. Use the json schema: {deals_schema}"
-    
-    return make_gemini_request(prompt)
+    return ai_bot.get_top_deals()
 
 def test_valid_prefs_type(gemini_prefs_response):
     """Validate pref response type"""
@@ -137,13 +36,53 @@ def test_valid_deals_type(gemini_deals_response):
 def test_valid_prefs_schema(gemini_prefs_response):
     """Validating prompt response"""
     try:
-        validate(instance=gemini_prefs_response, schema=prefs_schema)
+        validate(instance=gemini_prefs_response, schema=ai_bot.pref_schema)
     except ValidationError as e:
         pytest.fail(f"Validation failed: {e.message}")
 
 def test_valid_deals_schema(gemini_deals_response):
     """Validating prompt response"""
     try:
-        validate(instance=gemini_deals_response, schema=deals_schema)
+        validate(instance=gemini_deals_response, schema=ai_bot.td_schema)
     except ValidationError as e:
         pytest.fail(f"Validation failed: {e.message}")
+
+@pytest.mark.json
+def test_extract_valid_raw_json():
+    raw = '{"foo": "bar", "baz": 42}'
+    result = ai_bot.clean_json(raw)
+    assert result == {"foo": "bar", "baz": 42}
+
+@pytest.mark.json
+def test_extract_json_from_markdown_block():
+    wrapped = '''```json
+{
+  "foo": "bar",
+  "baz": 42
+}
+```'''
+    result = ai_bot.clean_json(wrapped)
+    assert result == {"foo": "bar", "baz": 42}
+
+@pytest.mark.json
+def test_extract_json_from_markdown_block_without_language():
+    wrapped = '''```
+{
+  "foo": "bar"
+}
+```'''
+    result = ai_bot.clean_json(wrapped)
+    assert result == {"foo": "bar"}
+
+@pytest.mark.json
+def test_extract_json_raises_on_invalid_json():
+    with pytest.raises(json.JSONDecodeError):
+        ai_bot.clean_json("not a json string")
+
+@pytest.mark.json
+def test_extract_json_raises_on_markdown_invalid_json():
+    bad = '''```json
+this is not valid
+```'''
+    with pytest.raises(json.JSONDecodeError):
+        ai_bot.clean_json(bad)
