@@ -1,8 +1,6 @@
 import logging
 from datetime import datetime, timedelta, timezone
-from firebase_admin import firestore, db, credentials
-import firebase_admin
-from . import web_scraper
+from firebase_admin import db
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -14,7 +12,6 @@ def check_if_cached(query: str):
     checks if ai response data is cached in database.
     Returns data if true, or stores it and returns it if false.
     """
-    #check if it is cached
     document_date = str(datetime.now(timezone.utc)).split()[0]
 
     doc_ref = db.collection(COLLECTION_NAME).document(document_date)
