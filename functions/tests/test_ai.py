@@ -1,12 +1,10 @@
 """Integration tests"""
-import os
-import json
-import pytest
+import os, json, pytest
 from jsonschema import validate, ValidationError
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
-from functions.fn_imports.ai import AiBot
+from fn_imports.ai import AiBot
 
 load_dotenv() 
 
@@ -21,7 +19,7 @@ def ai_bot():
     return AiBot()
 
 def test_generate_content_works(ai_bot):
-    client = genai.Client(api_key=ai_bot.api_key)
+    client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
     try:
         response = client.models.generate_content(
             model="gemini-2.5-flash",
@@ -41,8 +39,8 @@ def pref_deals(ai_bot, promos):
     return ai_bot.get_pref_deals(promos, query)
 
 @pytest.fixture
-def top_deals(ai_bot):
-    return ai_bot.get_top_deals()
+def top_deals(ai_bot,promos):
+    return ai_bot.get_top_deals(promos)
 
 def test_pref_deals_is_dict(pref_deals):
     assert isinstance(pref_deals, dict), "pref_deals is not a dict"
@@ -62,13 +60,11 @@ def test_validate_top_deals_schema(top_deals, ai_bot):
     except ValidationError as e:
         pytest.fail(f"Validation failed: {e.message}")
 
-@pytest.mark.jsontest
 def test_extract_valid_raw_json(ai_bot):
     raw = '{"foo": "bar", "baz": 42}'
     result = ai_bot.clean_json(raw)
     assert result == {"foo": "bar", "baz": 42}
 
-@pytest.mark.jsontest
 def test_extract_json_from_markdown(ai_bot):
     wrapped = '''```json
 {
@@ -79,7 +75,6 @@ def test_extract_json_from_markdown(ai_bot):
     result = ai_bot.clean_json(wrapped)
     assert result == {"foo": "bar", "baz": 42}
 
-@pytest.mark.jsontest
 def test_json_from_markdown_block_without_language(ai_bot):
     wrapped = '''```
 {
@@ -89,12 +84,10 @@ def test_json_from_markdown_block_without_language(ai_bot):
     result = ai_bot.clean_json(wrapped)
     assert result == {"foo": "bar"}
 
-@pytest.mark.jsontest
 def test_raises_on_invalid_json(ai_bot):
     with pytest.raises(json.JSONDecodeError):
         ai_bot.clean_json("not a json string")
 
-@pytest.mark.jsontest
 def test_raises_on_markdown_invalid_json(ai_bot):
     bad = '''```json
 this is not valid
