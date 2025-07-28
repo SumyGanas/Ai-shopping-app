@@ -1,7 +1,7 @@
 import uuid
 import pytest
 from google.cloud import storage
-from functions.fn_imports.database_config import write_promos, read_promos
+from functions.fn_imports.cloud_storage import write_promos, read_promos
 from functions.fn_imports.web_scraper import DealGenerator
 
 TEST_BUCKET_NAME = "ai_port_test"

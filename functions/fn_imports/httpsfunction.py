@@ -4,7 +4,7 @@ import json
 from firebase_functions import https_fn, options
 from firebase_functions.options import MemoryOption
 from . import ai
-from . import database_config
+from . import cloud_storage
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,12 +29,12 @@ def receive_query(req: https_fn.Request) -> https_fn.Response:
         except KeyError as exc:
             raise RuntimeError("Unknown Query") from exc
 
-    cached_response = database_config.check_if_cached(str(query))
+    cached_response = cloud_storage.check_if_cached(str(query))
 
     if not cached_response:
         logger.info("not cached")
         ai_bot = ai.AiBot()
-        promos = database_config.read_promos()
+        promos = cloud_storage.read_promos()
         if deal_type == "todays_deals":
             gemini_resp = ai_bot.get_top_deals(promos)
             logger.info(gemini_resp)
@@ -46,8 +46,8 @@ def receive_query(req: https_fn.Request) -> https_fn.Response:
         if resp is False:
             ai_resp = None
         else:
-            database_config.add_data(query, json.dumps(gemini_resp))
-            ai_resp = database_config.check_if_cached(str(query))
+            cloud_storage.add_data(query, json.dumps(gemini_resp))
+            ai_resp = cloud_storage.check_if_cached(str(query))
     else:
         logger.info("cached")
         ai_resp = cached_response

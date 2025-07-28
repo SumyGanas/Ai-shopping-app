@@ -3,7 +3,7 @@ import time
 import logging
 from firebase_functions import scheduler_fn
 from firebase_functions.options import MemoryOption
-from . import database_config
+from . import cloud_storage
 
 
 logging.basicConfig(level=logging.INFO)
@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 def databasecleanup(event: scheduler_fn.ScheduledEvent) -> None:
     """Delete old data from and add new data to the firestore database"""
     logger.info("Cleanup running")
-    database_config.write_promos()
+    cloud_storage.write_promos()
     time.sleep(60)
-    database_config.delete_old_data()
+    cloud_storage.delete_old_data()
     logger.info("Cleanup finished")
 
