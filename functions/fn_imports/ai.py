@@ -1,6 +1,7 @@
 """Module to connect to gemini API"""
 import logging
 import os
+import re
 import json
 from google import genai
 from google.genai import types
@@ -9,7 +10,7 @@ from dotenv import load_dotenv
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-load_dotenv() 
+load_dotenv(dotenv_path="../.env") 
 
 class AiBot():
     """Bot"""
@@ -116,18 +117,10 @@ class AiBot():
     "required": ["deals"]
 }
 
-    def test_ai_conn(self):
-        """Testing method"""
-        model = genai.GenerativeModel('gemini-1.5-pro')
-        api_key = self.api_key
-        genai.configure(api_key=api_key)
-        prompt = "Write me a very short story about a sentient strawberry"
-        response = model.generate_content(prompt)
-        logger.info(response.usage_metadata)
-        return response.text
     
     def test_new_conn(self):
         """New test"""
+        print(self.api_key)
         client = genai.Client(api_key=self.api_key)
 
         response = client.models.generate_content(
@@ -137,7 +130,13 @@ class AiBot():
                 thinking_config=types.ThinkingConfig(thinking_budget=0) # Disables thinking
             ),
         )
-        print(response.text)
+        try:
+            clean_response = self.clean_json(response.text)
+            return json.loads(clean_response)
+        except UnboundLocalError:
+            return "Empty/incorrect prompt provided to the AI"
+        except json.JSONDecodeError:
+            return json.loads(response.text) 
         
 
     def get_pref_deals(self, promos: str, query: tuple[str] | str):
@@ -146,58 +145,40 @@ class AiBot():
         promos: str
         query: tuple for preferred_deals or str for todays_deals
         """
-        client = genai.Client()
+        client = genai.Client(api_key=self.api_key)
         try:
             response = client.models.generate_content(
             model="gemini-2.5-flash",
-            contents="List a few popular cookie recipes, and include the amounts of ingredients.",
+            contents=f"As a beauty expert, recommend the top 3 products from each of the categories: makeup, skincare, and haircare from Ulta for a customer who has {query[0]} skin with {query[1]}, {query[2]} hair that is {query[3]}, and likes a {query[4]} makeup look. Use the given list of discounts and promotions: ({promos}). For each category, provide the following details for each product: product name, why each product is relevant for the customer's preferences, product link, original price, and sale price. Do not include price in the reason for relevancy. Do not include kit and value prices in your analysis. Return the recommendations with the given JSON schema: {self.pref_schema}.",
             config={
                 "response_mime_type": "application/json",
                 "response_schema": self.pref_schema,
             },
         )
             logger.info(response.usage_metadata)
-            return json.loads(response.text)
+            clean_response = self.clean_json(response.text)
+            return clean_response
         except UnboundLocalError:
             return "Empty/incorrect prompt provided to the AI"
-        
-        """model = genai.GenerativeModel(
-            'gemini-1.5-flash',generation_config={"response_mime_type": "application/json"}
-            )
-        genai.configure(api_key=self.api_key)
+        except json.JSONDecodeError:
+            return json.loads(response.text) 
 
-        prompt = f"As a beauty expert, recommend the top 3 products from each of the categories: makeup, skincare, and haircare from Ulta for a customer who has {query[0]} skin with {query[1]}, {query[2]} hair that is {query[3]}, and likes a {query[4]} makeup look. Use the given list of discounts and promotions: ({promos}). For each category, provide the following details for each product: product name, why each product is relevant for the customer's preferences, product link, original price, and sale price. Do not include price in the reason for relevancy. Do not include kit and value prices in your analysis. Return the recommendations with the given JSON schema: {self.pref_schema}."
+    
+    def clean_json(self, text):
+        """Clean json from markdown"""
+        markdown_block = re.match(r"^```(?:json)?\s*\n(.+?)\n```$", text.strip(), re.DOTALL)
+        if markdown_block:
+            cleaned = markdown_block.group(1).strip()
+        else:
+            cleaned = text.strip()
+        return json.loads(cleaned)
 
-        try:
-            response = model.generate_content(prompt)
-            logger.info(response.usage_metadata)
-
-            return json.loads(response.text)
-
-        except UnboundLocalError:
-            return "Empty/incorrect prompt provided to the AI"""
 
     def get_top_deals(self, promos: str):
         """
         Queries the AI for the top 10 best deals
         """
-        """api_key = self.api_key
-        model = genai.GenerativeModel(
-            'gemini-1.5-pro',generation_config={"response_mime_type": "application/json"}
-            )
-        genai.configure(api_key=api_key)
-
-        prompt = f"As a savings expert, identify the top 10 best deals from the provided list of promotions: {promos}. For each deal, analyze discounts, gifts with purchase, and other promotions. Exclude kit prices and value prices. Provide the following details for each deal: product name, product link, original price, sale price, and a brief analysis of why the deal is worth purchasing. Return the recommendations with the given JSON schema: {self.td_schema}."
-
-        try:
-            response = model.generate_content(prompt)
-            logger.info(response.usage_metadata)
-
-            return json.loads(response.text)
-
-        except UnboundLocalError:
-            return "Empty/incorrect prompt provided to the AI"""
-        client = genai.Client()
+        client = genai.Client(api_key=self.api_key)
         try:
             response = client.models.generate_content(
             model="gemini-2.5-flash",
@@ -208,28 +189,10 @@ class AiBot():
             },
         )
             logger.info(response.usage_metadata)
-            return json.loads(response.text)
+            clean_response = self.clean_json(response.text)
+            return clean_response
         except UnboundLocalError:
             return "Empty/incorrect prompt provided to the AI"
-
-
-    def validate_response_schema(self, resp: dict, schema: str):
-        """
-        Validates accuracy of the AI JSON response
-        schemas: "prefs", "td"
-        """
-
-        if schema == "prefs":
-            expected_schema = self.pref_schema
-        elif schema  == "td":
-            expected_schema = self.td_schema
-        else:
-            return False
-
-        try:
-            validate(instance=resp, schema=expected_schema)
-        except ValidationError:
-            return False
-
-        return True
+        except json.JSONDecodeError:
+            return json.loads(response.text) 
 
