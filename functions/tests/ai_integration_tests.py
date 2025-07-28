@@ -12,7 +12,7 @@ load_dotenv()
 
 @pytest.fixture
 def promos():
-    with open("./test_promos.txt","r", encoding="utf-8") as file:
+    with open("mock_data/test_promos.txt","r", encoding="utf-8") as file:
         promos = file.read()
     return promos
 

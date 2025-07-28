@@ -1,0 +1,31 @@
+import uuid
+import pytest
+from google.cloud import storage
+from functions.fn_imports.database_config import write_promos, read_promos
+from functions.fn_imports.web_scraper import DealGenerator
+
+TEST_BUCKET_NAME = "ai_port_test"
+
+@pytest.mark.integration
+def test_write_and_read_promos_using_file():
+    test_blob_name = f"test-promo-blob-{uuid.uuid4()}"
+
+    with open("mock_data/bucket_data.txt", "r", encoding="utf-8") as f:
+        test_data = f.read()
+
+    write_promos(
+        bucket_name_override=TEST_BUCKET_NAME,
+        blob_name_override=test_blob_name,
+        content_override=test_data
+    )
+
+    result = read_promos(
+        bucket_name_override=TEST_BUCKET_NAME,
+        blob_name_override=test_blob_name
+    )
+
+    assert result == test_data
+
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(TEST_BUCKET_NAME)
+    bucket.blob(test_blob_name).delete()

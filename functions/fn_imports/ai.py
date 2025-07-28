@@ -116,26 +116,6 @@ class AiBot():
     },
     "required": ["deals"]
 }
-
-    
-    def test_new_conn(self):
-        print(self.api_key)
-        client = genai.Client(api_key=self.api_key)
-
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents="Hi!",
-            config=types.GenerateContentConfig(
-                thinking_config=types.ThinkingConfig(thinking_budget=0)
-            ),
-        )
-        try:
-            clean_response = self.clean_json(response.text)
-            return json.loads(clean_response)
-        except UnboundLocalError:
-            return "Empty/incorrect prompt provided to the AI"
-        except json.JSONDecodeError:
-            return json.loads(response.text) 
         
 
     def get_pref_deals(self, promos: str, query: tuple[str] | str) -> dict:
