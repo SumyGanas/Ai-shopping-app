@@ -5,7 +5,6 @@ import re
 import json
 from google import genai
 from google.genai import types
-from jsonschema import validate, ValidationError
 from dotenv import load_dotenv
 
 logging.basicConfig(level=logging.INFO)
