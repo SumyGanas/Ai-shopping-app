@@ -119,15 +119,14 @@ class AiBot():
 
     
     def test_new_conn(self):
-        """New test"""
         print(self.api_key)
         client = genai.Client(api_key=self.api_key)
 
         response = client.models.generate_content(
             model="gemini-2.5-flash",
-            contents="Write me a very short story about a sentient strawberry",
+            contents="Hi!",
             config=types.GenerateContentConfig(
-                thinking_config=types.ThinkingConfig(thinking_budget=0) # Disables thinking
+                thinking_config=types.ThinkingConfig(thinking_budget=0)
             ),
         )
         try:
@@ -139,7 +138,7 @@ class AiBot():
             return json.loads(response.text) 
         
 
-    def get_pref_deals(self, promos: str, query: tuple[str] | str):
+    def get_pref_deals(self, promos: str, query: tuple[str] | str) -> dict:
         """
         Queries the AI for preference based sales or current best sales
         promos: str
@@ -164,7 +163,7 @@ class AiBot():
             return json.loads(response.text) 
 
     
-    def clean_json(self, text):
+    def clean_json(self, text) -> dict:
         """Clean json from markdown"""
         markdown_block = re.match(r"^```(?:json)?\s*\n(.+?)\n```$", text.strip(), re.DOTALL)
         if markdown_block:
@@ -174,7 +173,7 @@ class AiBot():
         return json.loads(cleaned)
 
 
-    def get_top_deals(self, promos: str):
+    def get_top_deals(self, promos: str) -> dict:
         """
         Queries the AI for the top 10 best deals
         """

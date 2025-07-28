@@ -1,6 +1,5 @@
 """Testing module"""
 import unittest
-#from functions.fn_imports import ai
 from fn_imports import ai
 
 class TestAIResponses(unittest.TestCase):
