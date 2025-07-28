@@ -13,7 +13,6 @@ def check_if_cached(query: str):
     Returns data if true, or stores it and returns it if false.
     """
     document_date = str(datetime.now(timezone.utc)).split()[0]
-
     doc_ref = db.collection(COLLECTION_NAME).document(document_date)
     doc = doc_ref.get()
 
@@ -61,12 +60,4 @@ def delete_old_data():
             logger.info("Old AI queries have been deleted from firestore")
     else:
         logger.info("No old queries to delete from %s", yesterday_date_str)
-
-def test_firestore_conn():
-    """testing firestore database connectivity"""
-    document_date = str(datetime.now(timezone.utc)).split()[0]
-    doc_ref = db.collection(COLLECTION_NAME).document(document_date)
-    doc = doc_ref.get()
-    if doc.exists:
-        print(f"Document data: {doc.to_dict()}")
         
