@@ -109,7 +109,6 @@ class AiBot():
     },
     "required": ["deals"]
 }
-        
 
     def get_pref_deals(self, promos: str, query: tuple[str] | str) -> dict:
         """
@@ -135,7 +134,7 @@ class AiBot():
         except json.JSONDecodeError:
             return json.loads(response.text) 
 
-    
+
     def clean_json(self, text) -> dict:
         """Clean json from markdown"""
         markdown_block = re.match(r"^```(?:json)?\s*\n(.+?)\n```$", text.strip(), re.DOTALL)
@@ -167,4 +166,3 @@ class AiBot():
             return "Empty/incorrect prompt provided to the AI"
         except json.JSONDecodeError:
             return json.loads(response.text) 
-

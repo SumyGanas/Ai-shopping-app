@@ -6,7 +6,6 @@ from firebase_functions.options import MemoryOption
 from . import cloud_storage
 from . import fire_store
 
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -18,4 +17,3 @@ def databasecleanup(event: scheduler_fn.ScheduledEvent) -> None:
     time.sleep(60)
     fire_store.delete_old_data()
     logger.info("Cleanup finished")
-

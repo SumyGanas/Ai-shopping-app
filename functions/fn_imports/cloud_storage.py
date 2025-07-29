@@ -1,16 +1,10 @@
 """Firestore config"""
 import logging
-from firebase_admin import firestore, credentials
-import firebase_admin
 from google.cloud import storage
 from . import web_scraper
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-cred = credentials.ApplicationDefault()
-app = firebase_admin.initialize_app(cred)
-db = firestore.client()
 
 BUCKET_NAME = "promo_list_for_ai_scraper_123"
 COLLECTION_NAME = "ai_data_cache"
