@@ -1,14 +1,12 @@
 import logging
-from firebase_admin import firestore, credentials
 import firebase_admin
-from firebase_admin import db
+from firebase_admin import firestore
 from datetime import datetime, timedelta, timezone
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-cred = credentials.ApplicationDefault()
-app = firebase_admin.initialize_app(cred)
+app = firebase_admin.initialize_app()
 db = firestore.client()
 
 COLLECTION_NAME = "ai_data_cache"
@@ -45,7 +43,6 @@ def add_data(query: tuple[str], resp: str):
     data = {
     key : resp,
     }
-
     doc_ref.set(data, merge=True)
 
 def delete_old_data():
@@ -65,4 +62,3 @@ def delete_old_data():
             logger.info("Old AI queries have been deleted from firestore")
     else:
         logger.info("No old queries to delete from %s", yesterday_date_str)
-        
