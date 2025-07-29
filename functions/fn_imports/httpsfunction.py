@@ -36,23 +36,17 @@ def receive_query(req: https_fn.Request) -> https_fn.Response:
         ai_bot = ai.AiBot()
         promos = cloud_storage.read_promos()
         if deal_type == "todays_deals":
-            gemini_resp = ai_bot.get_top_deals(promos)
-            logger.info(gemini_resp)
-            resp = ai_bot.validate_response_schema(gemini_resp, "td")
+            resp = ai_bot.get_top_deals(promos)
 
         elif deal_type == "preferred_deals":
-            gemini_resp = ai_bot.get_pref_deals(promos, query)
-            resp = ai_bot.validate_response_schema(gemini_resp, "prefs")
+            resp = ai_bot.get_pref_deals(promos, query)
+
         if resp is False:
-            ai_resp = None
+            return https_fn.Response("Error: No AI response generated", status=500)
         else:
-            fire_store.add_data(query, json.dumps(gemini_resp))
+            fire_store.add_data(query, json.dumps(resp))
             ai_resp = fire_store.check_if_cached(str(query))
     else:
         ai_resp = cached_response
 
-
-
-    if ai_resp is None:
-        return https_fn.Response("Error: No AI response generated", status=500)
     return https_fn.Response(ai_resp, status=200)
