@@ -9,7 +9,7 @@ from . import fire_store
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-@scheduler_fn.on_schedule(schedule="59 04 * * *", memory=MemoryOption.MB_512, timeout_sec=30, max_instances=1)
+@scheduler_fn.on_schedule(schedule="59 04 * * *", memory=MemoryOption.MB_512, timeout_sec=100, max_instances=1)
 def databasecleanup(event: scheduler_fn.ScheduledEvent) -> None:
     """Delete old data from and add new data to the firestore database"""
     logger.info("Cleanup running")
