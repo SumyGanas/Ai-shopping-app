@@ -10,12 +10,9 @@
       "codebase": "default",
       "ignore": [
         "venv",
-        ".venv",
         ".git",
-        ".env",
         "firebase-debug.log",
         "firebase-debug.*.log",
-        "firebase.json",
         "*.local",
         "**/__pycache__/**",
         "functions/__pycache__/**",
