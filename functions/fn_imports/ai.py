@@ -9,6 +9,7 @@ class AiBot():
     """Bot"""
     def __init__(self):
         self.api_key = os.environ.get("GEMINI_API_KEY")
+        self.model = "gemini-2.5-flash"
         self.pref_schema = {
     "type": "object",
     "properties": {
@@ -119,21 +120,19 @@ class AiBot():
         client = genai.Client(api_key=self.api_key)
         try:
             response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=f"As a beauty expert, recommend the top 3 products from each of the categories: makeup, skincare, and haircare from Ulta for a customer who has {query[0]} skin with {query[1]}, {query[2]} hair that is {query[3]}, and likes a {query[4]} makeup look. Use the given list of discounts and promotions: ({promos}). For each category, provide the following details for each product: product name, why each product is relevant for the customer's preferences, product link, original price, and sale price. Do not include price in the reason for relevancy. Do not include kit and value prices in your analysis. Return the recommendations with the given JSON schema: {self.pref_schema}.",
+            model=self.model,
+            contents=f"You are an expert product recommender. Given this JSON list of promotional product deals, recommend the **top 3 makeup, skincare, and haircare items** for a customer who has {query[0]} skin with {query[1]}, {query[2]} hair that is {query[3]}, and likes a {query[4]} makeup look. List: ({promos}). For each category, provide the following details for each product: product name, why each product is relevant for the customer's preferences, product link, original price, and sale price. Exclude deals with kit prices and value prices.",
             config={
                 "response_mime_type": "application/json",
                 "response_schema": self.pref_schema,
             },
         )
-            logger.info(response.usage_metadata)
             clean_response = self.clean_json(response.text)
             return clean_response
         except UnboundLocalError:
             return "Empty/incorrect prompt provided to the AI"
         except json.JSONDecodeError:
             return json.loads(response.text) 
-
 
     def clean_json(self, text) -> dict:
         """Clean json from markdown"""
@@ -144,7 +143,6 @@ class AiBot():
             cleaned = text.strip()
         return json.loads(cleaned)
 
-
     def get_top_deals(self, promos: str) -> dict:
         """
         Queries the AI for the top 10 best deals
@@ -152,14 +150,13 @@ class AiBot():
         client = genai.Client(api_key=self.api_key)
         try:
             response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents="As a savings expert, identify the top 10 best deals from the provided list of promotions: {promos}. For each deal, analyze discounts, gifts with purchase, and other promotions. Exclude kit prices and value prices. Provide the following details for each deal: product name, product link, original price, sale price, and a brief analysis of why the deal is worth purchasing.",
+            model=self.model,
+            contents="As a savings expert, identify the top 10 best deals on beauty products from the provided list of promotions: {promos}. Exclude deals with kit prices and value prices. Provide the following details for each deal: product name, product link, original price, sale price, and a brief deal analysis.",
             config={
                 "response_mime_type": "application/json",
                 "response_schema": self.td_schema,
             },
         )
-            logger.info(response.usage_metadata)
             clean_response = self.clean_json(response.text)
             return clean_response
         except UnboundLocalError:
