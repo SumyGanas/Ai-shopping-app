@@ -122,12 +122,12 @@ class AiBot():
         try:
             response = client.models.generate_content(
             model=self.model,
-            contents=f"Recommend the **top 3 makeup, skincare, and haircare items** for a customer who has {query[0]} skin with {query[1]}, {query[2]} hair that is {query[3]}, and likes a {query[4]} makeup look from the following list of promotions. Provide these details for each reccomended product: product name, why each product is relevant for the customer's preferences, product link, original price, and sale price. Exclude deals with kit prices and value prices.\n\n({promos}).",
+            contents=f"\n{promos}\n\nRecommend the **top 3 makeup, skincare, and haircare items** for someone who has {query[0]} skin with {query[1]}, {query[2]} hair that is {query[3]}, and likes a {query[4]} makeup look from the provided deals, gifts with purchase, and discounts. Provide these details for each reccomended product: product name, why each product is relevant for the customer's preferences, product link, original price, and sale price. Exclude deals with kit prices and value prices.",
             config = types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_schema=self.pref_schema,
                 thinking_config=types.ThinkingConfig(thinking_budget=-1),
-                system_instruction="You are an expert product recommender."
+                system_instruction="You are an expert at reccomending the best products to solve beauty concerns."
             ))
             clean_response = self.clean_json(response.text)
             return clean_response
@@ -153,12 +153,13 @@ class AiBot():
         try:
             response = client.models.generate_content(
             model=self.model,
-            contents="Identify the top 10 best deals on beauty products from the following list of promotions. Exclude deals with kit prices and value prices. Provide the following details for each deal: product name, product link, original price, sale price, and a brief deal analysis.\n\n{promos}.",
+            contents="List of promos:\n{promos}\n\nIdentify the top 10 best deals on beauty products from the provided deals, gifts with purchase, and discounts. Exclude deals with kit prices and value prices. Try combining deals to get the best value for purchase. Provide the following details for each deal: product name, product link, original price, sale price, and a brief deal analysis.",
+            
             config = types.GenerateContentConfig(
                 response_mime_type="application/json",
-                response_schema=self.pref_schema,
+                response_schema=self.td_schema,
                 thinking_config=types.ThinkingConfig(thinking_budget=-1),
-                system_instruction="You are an expert in finding product deals and savings"
+                system_instruction="You are an expert in finding product deals and savings."
             ))
             
             clean_response = self.clean_json(response.text)
