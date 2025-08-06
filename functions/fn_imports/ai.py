@@ -1,6 +1,7 @@
 """Module to connect to gemini API"""
 import logging, os, re, json
 from google import genai
+from google.genai import types
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -9,7 +10,7 @@ class AiBot():
     """Bot"""
     def __init__(self):
         self.api_key = os.environ.get("GEMINI_API_KEY")
-        self.model = "gemini-2.5-flash"
+        self.model = "gemini-2.5-flash-lite"
         self.pref_schema = {
     "type": "object",
     "properties": {
@@ -121,12 +122,13 @@ class AiBot():
         try:
             response = client.models.generate_content(
             model=self.model,
-            contents=f"You are an expert product recommender. Given this JSON list of promotional product deals, recommend the **top 3 makeup, skincare, and haircare items** for a customer who has {query[0]} skin with {query[1]}, {query[2]} hair that is {query[3]}, and likes a {query[4]} makeup look. List: ({promos}). For each category, provide the following details for each product: product name, why each product is relevant for the customer's preferences, product link, original price, and sale price. Exclude deals with kit prices and value prices.",
-            config={
-                "response_mime_type": "application/json",
-                "response_schema": self.pref_schema,
-            },
-        )
+            contents=f"Recommend the **top 3 makeup, skincare, and haircare items** for a customer who has {query[0]} skin with {query[1]}, {query[2]} hair that is {query[3]}, and likes a {query[4]} makeup look from the following list of promotions. Provide these details for each reccomended product: product name, why each product is relevant for the customer's preferences, product link, original price, and sale price. Exclude deals with kit prices and value prices.\n\n({promos}).",
+            config = types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=self.pref_schema,
+                thinking_config=types.ThinkingConfig(thinking_budget=-1),
+                system_instruction="You are an expert product recommender."
+            ))
             clean_response = self.clean_json(response.text)
             return clean_response
         except UnboundLocalError:
@@ -151,12 +153,14 @@ class AiBot():
         try:
             response = client.models.generate_content(
             model=self.model,
-            contents="As a savings expert, identify the top 10 best deals on beauty products from the provided list of promotions: {promos}. Exclude deals with kit prices and value prices. Provide the following details for each deal: product name, product link, original price, sale price, and a brief deal analysis.",
-            config={
-                "response_mime_type": "application/json",
-                "response_schema": self.td_schema,
-            },
-        )
+            contents="Identify the top 10 best deals on beauty products from the following list of promotions. Exclude deals with kit prices and value prices. Provide the following details for each deal: product name, product link, original price, sale price, and a brief deal analysis.\n\n{promos}.",
+            config = types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=self.pref_schema,
+                thinking_config=types.ThinkingConfig(thinking_budget=-1),
+                system_instruction="You are an expert in finding product deals and savings"
+            ))
+            
             clean_response = self.clean_json(response.text)
             return clean_response
         except UnboundLocalError:
