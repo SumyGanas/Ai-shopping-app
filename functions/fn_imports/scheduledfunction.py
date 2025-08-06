@@ -14,6 +14,5 @@ def databasecleanup(event: scheduler_fn.ScheduledEvent) -> None:
     """Delete old data from and add new data to the firestore database"""
     logger.info("Cleanup running")
     cloud_storage.write_promos()
-    time.sleep(60)
     fire_store.delete_old_data()
     logger.info("Cleanup finished")
