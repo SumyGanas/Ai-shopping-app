@@ -10,13 +10,13 @@ class DealGenerator():
     def __init__(self):
         pass
 
-    def __get_ulta_soup(self, url) -> BeautifulSoup:
+    def __get_ulta_soup(self, url: str) -> BeautifulSoup:
         """Ulta soup using just bs4"""
         page = requests.get(url, timeout=5)
         soup = BeautifulSoup(page.content, "html.parser")
         return soup
 
-    def __get_ulta_sales(self, url) -> list[str]:
+    def __get_ulta_sales(self, url: str) -> list[str]|None:
         """
         Returns a list of ulta makeup, skincare and haircare sales
         """ 
@@ -24,17 +24,18 @@ class DealGenerator():
         promo_list = []
         items = soup.select("li.ProductListingResults__productCard a")
         for i,item in enumerate(items):
-            item_type = item.select_one("div.ProductCard__badge p").text
-            if item_type != "Sponsored":
-                item_name = "Name: "+item.contents[0].find("img").attrs["alt"]+"; "
-                item_link = "Link: "+item.attrs["href"]+"; "
-                list_price = item.contents[0].select("div.ProductPricing")[0].select("span")[2].text+"; "
-                sale_price = item.contents[0].select("div.ProductPricing")[0].select("span")[0].text
-                
-                promo = str(i+1)+". "+item_name+item_link+list_price+sale_price
-                promo_list.append(promo)
+            item_type = item.select_one("div.ProductCard__image")
+            if item_type is not None:
+                if item_type.text != "Sponsored":
+                    item_name = "Name: "+item.contents[0].find("img").attrs["alt"]+"; "
+                    item_link = "Link: "+item.attrs["href"]+"; "
+                    list_price = item.contents[0].select("div.ProductPricing")[0].select("span")[2].text+"; "
+                    sale_price = item.contents[0].select("div.ProductPricing")[0].select("span")[0].text
+                    
+                    promo = str(i+1)+". "+item_name+item_link+list_price+sale_price
+                    promo_list.append(promo)
 
-        #promo_list = self.__clean_data(promo_list, "sale")
+        
         return promo_list
 
     def __get_ulta_promos(self, sale_type: str) -> list[str]:
@@ -121,3 +122,7 @@ class DealGenerator():
 
         except (MaxRetryError, AttributeError) as exc:
             raise RuntimeError("Issue with beautiful soup instance") from exc
+        
+
+x = DealGenerator()
+print(x.get_all_data())
