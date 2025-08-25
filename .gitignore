@@ -78,3 +78,6 @@ service_account
 *.json
 *.pyc
 *.local.txt
+__pycache__
+.pytest_cache
+.vscode
