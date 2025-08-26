@@ -36,12 +36,8 @@ class DealGenerator():
                     }
                 promo_list.append(obj)
         
-        promos = {"dealType" : "Discounts",
-                  "deals" : promo_list}
-        pl = json.dumps(promos, ensure_ascii=False, separators=(',', ':'))
-        if len(pl):
-            return pl
-        return ""
+        pl = promo_list if len(promo_list) else ""
+        return pl
 
     def __get_gwp(self) -> list[str]:
         """
@@ -58,14 +54,8 @@ class DealGenerator():
                 }      
             promo_list.append(obj)
         
-        promos = {"dealType" : "Gift with Purchase",
-                  "deals" : promo_list}
-
-        pl = json.dumps(promos, ensure_ascii=False, separators=(',', ':'))
-
-        if len(pl):
-            return pl
-        return ""
+        pl = promo_list if len(promo_list) else ""
+        return pl
     
     def __get_bmsm(self) -> list[str]:
         """
@@ -83,15 +73,8 @@ class DealGenerator():
                 str(i): p2
                 }      
             promo_list.append(obj)
-        
-        promos = {"dealType" : "BOGO",
-                  "deals" : promo_list}
-
-        pl = json.dumps(promos, ensure_ascii=False, separators=(',', ':'))
-
-        if len(pl):
-            return pl
-        return ""
+        pl = promo_list if len(promo_list) else ""
+        return pl
     
     def __get_td_promos(self) -> list[str]:
         """
@@ -106,12 +89,8 @@ class DealGenerator():
                 }  
             promo_list.append(obj)
         
-        promos = {"dealType" : "Daily Deals",
-                  "deals" : promo_list}
-        pl = json.dumps(promos, ensure_ascii=False, separators=(',', ':'))
-        if len(pl):
-            return pl
-        return ""
+        pl = promo_list if len(promo_list) else ""
+        return pl
     
     def get_all_data(self):
         """Returns all promos as a string"""
@@ -129,7 +108,18 @@ class DealGenerator():
             
             bmsm = self.__get_bmsm()
 
-            return makeup, skincare, haircare, gwp, td, bmsm
+            products = {
+                "discounts" : {
+                "makeup":makeup,
+                "skincare":skincare,
+                "haircare":haircare
+                },
+                "Gift with purchase":gwp,
+                "Daily Deals":td,
+                "BOGO":bmsm
+            }
+
+            return json.dumps(products, ensure_ascii=False, separators=(',', ':'))
 
         except (MaxRetryError, AttributeError) as exc:
             raise RuntimeError("Issue with beautiful soup instance") from exc
