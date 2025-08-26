@@ -3,6 +3,7 @@ import logging, os, re, json
 from google import genai
 from google.genai import types
 
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -112,22 +113,47 @@ class AiBot():
     "required": ["deals"]
 }
 
-    def get_pref_deals(self, promos: str, query: tuple[str] | str) -> dict:
+    def get_pref_deals(self, filepath: str, promos: str, query: tuple[str] | str) -> dict:
         """
         Queries the AI for preference based sales or current best sales
         promos: str
         query: tuple for preferred_deals or str for todays_deals
         """
         client = genai.Client(api_key=self.api_key)
+        f = client.files.upload(file=filepath)
         try:
             response = client.models.generate_content(
             model=self.model,
-            contents=f"List of promos:\n{promos}\n\nExcluding deals with kit prices and value prices, recommend the **top 3 makeup, skincare, and haircare items** from these products for someone who has {query[0]} skin with {query[1]}, {query[2]} hair that is {query[3]}, and likes a {query[4]} makeup look.",
+            contents=[{"role":"user","parts":[
+                {"text": f"Use only the attached JSON file to recommend the **top 3 makeup, skincare, and haircare items** from these products for someone who has {query[0]} skin with {query[1]}, {query[2]} hair that is {query[3]}, and likes a {query[4]} makeup look."},
+                {"file_data": {"file_uri": f.uri, "mime_type": "application/json"}}
+            ]}],
             config = types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_schema=self.pref_schema,
                 thinking_config=types.ThinkingConfig(thinking_budget=-1),
-                system_instruction="You are an expert in recommending the best beauty products for specific concerns. Use only the provided product links in your response. Do not invent or suggest products and links that are not included in the given list. Tailor your recommendations to directly address the user’s stated beauty concerns. Respond with the product name, why each product is relevant for the customer's preferences, product ulta link, original price, and sale price."
+                system_instruction="""You are a beauty product recommender.
+                        Use only the fields provided: product_name, product_link, product_original_price, product_sale_price, product_relevance_for_customer. Do not fetch or invent data.  
+                        Output valid JSON matching the schema: 3 items each in makeup, skincare, hair. Always return 3 items per category; if no perfect match, choose the best available and explain why.  
+
+                        Evidence:  
+                        - Actives if named or with clear synonyms: salicylic/BHA = acne, benzoyl peroxide = acne, retinol/retinal = anti-aging/acne, niacinamide = oil/redness/pigmentation, azelaic acid = acne/redness, vitamin C/ascorbic = pigmentation/anti-aging, hyaluronic/HA = dehydration, ceramides = dryness/barrier, SPF ## = suncare.  
+                        - Marketing cues (hydrating, plumping, brightening, clarifying, soothing, barrier) are weak evidence.  
+
+                        Ranking:  
+                        1. Direct active match  
+                        2. Synonym match  
+                        3. Marketing descriptor  
+                        Tie-breakers: higher discount percentage, then lower sale price.  
+
+                        For each product fill:  
+                        - product_name: copy from input  
+                        - product_relevance_for_customer: short sentence quoting evidence from name  
+                        - product_link: copy from input
+                        - product_original_price: copy from input  
+                        - product_sale_price: copy from input  
+
+                        """
             ))
             clean_response = self.clean_json(response.text)
             return clean_response
@@ -159,12 +185,28 @@ class AiBot():
                 response_mime_type="application/json",
                 response_schema=self.td_schema,
                 thinking_config=types.ThinkingConfig(thinking_budget=-1),
-                system_instruction="You are an expert in identifying good product deals and combining them to get the best value for purchase.Use only the provided product links in your response. Do not invent or suggest products and links that are not included in the given list. Exclude deals mentioning kit prices and value prices. Respond with the product name, product ulta link, original price, sale price, and a brief deal analysis for each deal."
+                system_instruction="""
+                    You are a beauty deal analyzer.
+
+                    Use only the fields provided: product_name, product_link, product_original_price, product_sale_price. Do not fetch or invent data.  
+                    Output valid JSON matching the schema: an array of 10 items under "deals". Always return 10 items; if no perfect deal, choose the best available.  
+
+                    For each item fill:  
+                    - product_name: copy from input  
+                    - product_link: copy from input  
+                    - product_original_price: copy from input  
+                    - product_sale_price: copy from input  
+                    - deal_analysis: one short sentence explaining why this is a good deal, quoting evidence from name or discount (e.g. percent off, large saving, popular active).  
+
+                    Ranking preference: higher discount percentage first, then lower sale price.  
+                    Be concise and factual; never invent product details.  
+
+                    """
             ))
-            
             clean_response = self.clean_json(response.text)
             return clean_response
         except UnboundLocalError:
             return "Empty/incorrect prompt provided to the AI"
         except json.JSONDecodeError:
             return json.loads(response.text) 
+        
