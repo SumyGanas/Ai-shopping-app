@@ -122,12 +122,12 @@ class AiBot():
         try:
             response = client.models.generate_content(
             model=self.model,
-            contents=f"List of promos:\n{promos}\n\nExcluding deals with kit prices and value prices, recommend the **top 3 makeup, skincare, and haircare items** from these products for someone who has {query[0]} skin with {query[1]}, {query[2]} hair that is {query[3]}, and likes a {query[4]} makeup look. Using the the provided deals, gifts with purchase, and discounts, respond with the product name, why each product is relevant for the customer's preferences, product link, original price, and sale price, for each category.",
+            contents=f"List of promos:\n{promos}\n\nExcluding deals with kit prices and value prices, recommend the **top 3 makeup, skincare, and haircare items** from these products for someone who has {query[0]} skin with {query[1]}, {query[2]} hair that is {query[3]}, and likes a {query[4]} makeup look.",
             config = types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_schema=self.pref_schema,
                 thinking_config=types.ThinkingConfig(thinking_budget=-1),
-                system_instruction="You are an expert at reccomending the best products to solve beauty concerns."
+                system_instruction="You are an expert in recommending the best beauty products for specific concerns. Use only the provided product links in your response. Do not invent or suggest products that are not included in the given list. Tailor your recommendations to directly address the user’s stated beauty concerns and respond with the product name, why each product is relevant for the customer's preferences, product link, original price, and sale price."
             ))
             clean_response = self.clean_json(response.text)
             return clean_response
@@ -153,13 +153,13 @@ class AiBot():
         try:
             response = client.models.generate_content(
             model=self.model,
-            contents="List of promos:\n{promos}\n\nExcluding deals with kit prices and value prices, identify the top 10 best deals on beauty products from the provided deals, gifts with purchase, and discounts. Using the data, respond with the product name, product link, original price, sale price, and a brief deal analysis for each deal.",
+            contents="List of promos:\n{promos}\n\n Identify the **top 10 best deals** on beauty products from the provided deals, gifts with purchase, and discounts.",
             
             config = types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_schema=self.td_schema,
                 thinking_config=types.ThinkingConfig(thinking_budget=-1),
-                system_instruction="You are an expert in identifying good product deals and combining them to get the best value for purchase."
+                system_instruction="You are an expert in identifying good product deals and combining them to get the best value for purchase.Use only the provided product links in your response. Do not invent or suggest products that are not included in the given list. Exclude deals mentioning kit prices and value prices. Respond with the product name, product link, original price, sale price, and a brief deal analysis for each deal."
             ))
             
             clean_response = self.clean_json(response.text)
