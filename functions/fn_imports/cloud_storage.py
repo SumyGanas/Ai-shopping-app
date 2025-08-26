@@ -22,7 +22,9 @@ def write_promos(bucket_name_override=None, blob_name_override=None, contents_ov
 
     try:
         blob = bucket.blob(blob_name)
-        blob.upload_from_string(contents)
+        blob.cache_control = "no-cache"
+        blob.upload_from_string(contents, content_type="application/json")
+
     except RuntimeError:
         logger.error("Issue encountered while writing new promos to the bucket")
 
