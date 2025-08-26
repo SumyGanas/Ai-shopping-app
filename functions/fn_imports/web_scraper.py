@@ -1,6 +1,7 @@
 """Parser bot"""
 import re
 import unicodedata
+import json
 import requests
 from bs4 import BeautifulSoup, NavigableString
 from urllib3.exceptions import MaxRetryError
@@ -25,74 +26,77 @@ class DealGenerator():
         items = soup.select("li.ProductListingResults__productCard a")
         for i,item in enumerate(items):
             item_type = item.select_one("div.ProductCard__image")
-            if item_type is not None:
-                if item_type.text != "Sponsored":
-                    item_name = "Name: "+item.contents[0].find("img").attrs["alt"]+"; "
-                    item_link = "Link: "+item.attrs["href"]+"; "
-                    list_price = item.contents[0].select("div.ProductPricing")[0].select("span")[2].text+"; "
-                    sale_price = item.contents[0].select("div.ProductPricing")[0].select("span")[0].text
-                    
-                    promo = str(i+1)+". "+item_name+item_link+list_price+sale_price
-                    promo_list.append(promo)
-
-        
+            if item_type is not None and item_type.text != "Sponsored":
+                product = {
+                        "id": soup.select("li.ProductListingResults__productCard")[i].attrs["data-sku-id"],
+                        "n": item.contents[0].find("img").attrs["alt"],
+                        "sp": item.contents[0].select("div.ProductPricing")[0].select("span")[0].text,
+                        "lp": item.contents[0].select("div.ProductPricing")[0].select("span")[2].text,
+                        "u": item.attrs["href"]
+                    }
+                promo = json.dumps(product, ensure_ascii=False, separators=(',', ':'))
+                promo_list.append(promo)
         return promo_list
 
-    def __get_ulta_promos(self, sale_type: str) -> list[str]:
+    def __get_gwp(self) -> list[str]:
         """
         Returns a list of ulta promos from a category
         Args: "gwp", "bmsm
         """
-        if sale_type == "gwp":
-            url = "https://www.ulta.com/promotion/gift-with-purchase"
-        elif sale_type == "bmsm":
-            url = "https://www.ulta.com/promotion/buy-more-save-more"
-
-        soup = self.__get_ulta_soup(url)
+        soup = self.__get_ulta_soup("https://www.ulta.com/promotion/gift-with-purchase")
         promo_list = []
         items = soup.select("li.PromotionListingResults__compactDealCard div.CompactDealCard__gwpLine")
         for i,item in enumerate(items):
-            ls = []
-            for tag in item.descendants:
-                if tag.string is not None and isinstance(tag, NavigableString) is True:
-                    ls.append(tag.string)
-            promo = " ".join(ls)
-            indexed_promo = str(i+1)+". "+promo.strip()
-            index = indexed_promo.find("(valid thru")
-            if index and index != -1:
-                edited_promo = indexed_promo[:index]
-            promo_list.append(edited_promo)
-
-        promos = "\n".join(promo_list)
-        return promos
+            item = {
+                "h1": item.select("div")[2].text,
+                "h2": item.select("div")[3].text
+                }      
+            promo = json.dumps(item, ensure_ascii=False, separators=(',', ':'))
+            promo_list.append(promo)
+        return promo_list
+    
+    def __get_bmsm(self) -> list[str]:
+        """
+        Returns a list of ulta promos from a category
+        Args: "gwp", "bmsm
+        """
+        soup = self.__get_ulta_soup("https://www.ulta.com/promotion/buy-more-save-more")
+        promo_list = []
+        items = soup.select("li.PromotionListingResults__compactDealCard div.CompactDealCard__gwpLine")
+        for i,item in enumerate(items):
+            text = item.select("div")[2].text
+            p1 = re.sub("Online only","",text)
+            p2 = re.sub(r"\([^)]*?\)","",p1)
+            obj = {
+                "deal": p2
+                }      
+            promo = json.dumps(obj, ensure_ascii=False, separators=(',', ':'))
+            promo_list.append(promo)
+        if len(promo_list):
+            return promo_list
+        return ""
     
     def __get_td_promos(self):
         """
         Returns a list of ulta promos from today's deals
         """
-        url = "https://www.ulta.com/promotion/all"
-        soup = self.__get_ulta_soup(url)
+        soup = self.__get_ulta_soup("https://www.ulta.com/promotion/all")
         promo_list = []
-        items = soup.select("div.LargeDealRail__itemclass div.LargeDealCard__textContent")
+        items = soup.select("div.LargeDealCard__textContent")
         for i,item in enumerate(items):
-            try:
-                item.find("div.LargeDealCard__actions").extract()
-            except AttributeError:
-                pass
-            ls = []
-            for tag in item.descendants:
-                if tag.string is not None and isinstance(tag, NavigableString) is True:
-                    ls.append(tag.string)
-            promo = " ".join(ls)
-            indexed_promo = str(i+1)+". "+promo
-            promo_list.append(indexed_promo)
-
-            promos = "\n".join(promo_list)
-            return "\nDaily deals:\n"+promos
-
+            obj = {
+                "deal": item.select("div.LargeDealCard__headline")[0].text +" "+ item.select("div.LargeDealCard__subtitle")[0].text
+                }  
+            promo = json.dumps(obj, ensure_ascii=False, separators=(',', ':'))
+            promo_list.append(promo)
+        if len(promo_list):
+            return promo_list
+        return ""
+    
     def get_all_data(self):
         """Returns all promos as a string"""
         try:
+            """
             makeup = self.__get_ulta_sales("https://www.ulta.com/promotion/sale?category=makeup")
             makeup_sales = "\n".join(makeup)
             
@@ -103,22 +107,21 @@ class DealGenerator():
             haircare_sales = "\n".join(haircare)
 
             ulta_sales = "Sales:\n"+"Makeup:\n"+makeup_sales+"\n\n"+"Skincare:\n"+skincare_sales+"\n\n"+"Haircare:\n"+haircare_sales
-
-            gwp = self.__get_ulta_promos("gwp")
+           
+            gwp = self.__get_gwp()
             if not gwp:
                 gwp = ""
-            
+             
+            """
             td = self.__get_td_promos()
             if not td:
                 td = ""
             
-            bmsm = self.__get_ulta_promos("bmsm")
-            if not bmsm:
-                bmsm = ""
-
-            promos = "Promotions:\n"+"\nGift with purchase:\n"+gwp+"\n"+td+"\n"+"\nBulk discounts:\n"+bmsm
             
-            return f"{ulta_sales}\n{promos}"
+            #bmsm = self.__get_bmsm()
+
+            
+            return td
 
         except (MaxRetryError, AttributeError) as exc:
             raise RuntimeError("Issue with beautiful soup instance") from exc
