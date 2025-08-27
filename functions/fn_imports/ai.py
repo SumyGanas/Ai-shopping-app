@@ -3,7 +3,6 @@ import logging, os, re, json
 from google import genai
 from google.genai import types
 
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -113,20 +112,24 @@ class AiBot():
     "required": ["deals"]
 }
 
-    def get_pref_deals(self, filepath: str, promos: str, query: tuple[str] | str) -> dict:
+    def generate_uri(self, json_str) -> str:
+        client = genai.Client()
+        f = client.files.upload_bytes(content=json_str.encode("utf-8"), mime_type="application/json")
+        return f.uri
+
+    def get_pref_deals(self, uri: str, query: tuple[str] | str) -> dict:
         """
         Queries the AI for preference based sales or current best sales
         promos: str
         query: tuple for preferred_deals or str for todays_deals
         """
         client = genai.Client(api_key=self.api_key)
-        f = client.files.upload(file=filepath)
         try:
             response = client.models.generate_content(
             model=self.model,
             contents=[{"role":"user","parts":[
                 {"text": f"Use only the attached JSON file to recommend the **top 3 makeup, skincare, and haircare items** from these products for someone who has {query[0]} skin with {query[1]}, {query[2]} hair that is {query[3]}, and likes a {query[4]} makeup look."},
-                {"file_data": {"file_uri": f.uri, "mime_type": "application/json"}}
+                {"file_data": {"file_uri": uri, "mime_type": "application/json"}}
             ]}],
             config = types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -171,15 +174,19 @@ class AiBot():
             cleaned = text.strip()
         return json.loads(cleaned)
 
-    def get_top_deals(self, promos: str) -> dict:
+    def get_top_deals(self, uri: str) -> dict:
         """
         Queries the AI for the top 10 best deals
         """
         client = genai.Client(api_key=self.api_key)
+        client = genai.Client(api_key=self.api_key)
         try:
             response = client.models.generate_content(
             model=self.model,
-            contents="List of promos:\n{promos}\n\n Identify the **top 10 best deals** on beauty products from the provided deals, gifts with purchase, and discounts.",
+            contents=[{"role":"user","parts":[
+                {"text": f"Use only the attached JSON file to identify the **top 10 best deals** on beauty products from the provided deals, gifts with purchase, and discounts."},
+                {"file_data": {"file_uri": uri, "mime_type": "application/json"}}
+            ]}],
             
             config = types.GenerateContentConfig(
                 response_mime_type="application/json",
