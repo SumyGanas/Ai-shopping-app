@@ -10,7 +10,7 @@ load_dotenv()
 
 @pytest.fixture
 def promos():
-    with open("mock_data/test_promos.txt","r", encoding="utf-8") as file:
+    with open("test_promos.txt","r", encoding="utf-8") as file:
         promos = file.read()
     return promos
 
@@ -34,13 +34,18 @@ def test_generate_content_works(ai_bot):
         pytest.fail("generate_content() raised an exception unexpectedly.")
 
 @pytest.fixture
-def pref_deals(ai_bot, promos):
-    query = ("oily", "sensitive", "curly", "long", "natural")
-    return ai_bot.get_pref_deals(promos, query)
+def uri(ai_bot) -> str:
+    path = "test_promos.txt"
+    return ai_bot.generate_uri(path)
 
 @pytest.fixture
-def top_deals(ai_bot,promos):
-    return ai_bot.get_top_deals(promos)
+def pref_deals(ai_bot, uri):
+    query = ("oily", "sensitive", "curly", "long", "natural")
+    return ai_bot.get_pref_deals(uri, query)
+
+@pytest.fixture
+def top_deals(ai_bot,uri):
+    return ai_bot.get_top_deals(uri)
 
 def test_pref_deals_is_dict(pref_deals):
     assert isinstance(pref_deals, dict), "pref_deals is not a dict"

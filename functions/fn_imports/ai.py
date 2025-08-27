@@ -112,9 +112,9 @@ class AiBot():
     "required": ["deals"]
 }
 
-    def generate_uri(self, json_str) -> str:
+    def generate_uri(self, path: str) -> str:
         client = genai.Client()
-        f = client.files.upload_bytes(content=json_str.encode("utf-8"), mime_type="application/json")
+        f = client.files.upload(file=path)
         return f.uri
 
     def get_pref_deals(self, uri: str, query: tuple[str] | str) -> dict:
@@ -178,7 +178,6 @@ class AiBot():
         """
         Queries the AI for the top 10 best deals
         """
-        client = genai.Client(api_key=self.api_key)
         client = genai.Client(api_key=self.api_key)
         try:
             response = client.models.generate_content(

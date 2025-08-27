@@ -1,5 +1,8 @@
 """Firestore config"""
 import logging
+import json
+import tempfile
+import os
 from google.cloud import storage
 from . import web_scraper
 
@@ -57,3 +60,15 @@ def get_uri() -> str:
     blob = bucket.get_blob(blob_name)
     uri = blob.download_as_text()
     return uri
+
+def json_to_tmp(data, prefix="upload_", suffix=".json"):
+    if isinstance(data, dict):
+        json_str = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
+    else:
+        json_str = str(data)
+
+    tmp = tempfile.NamedTemporaryFile(delete=False, prefix=prefix, suffix=suffix, mode="w", encoding="utf-8")
+    tmp.write(json_str)
+    tmp.close()
+
+    return tmp.name

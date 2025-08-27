@@ -8,7 +8,7 @@ TEST_BUCKET_NAME = "ai_port_test"
 def test_write_and_read_promos_using_file():
     test_blob_name = f"test-promo-blob-{uuid.uuid4()}"
 
-    with open("mock_data/bucket_data.txt", "r", encoding="utf-8") as f:
+    with open("test_promos.txt", "r", encoding="utf-8") as f:
         test_data = f.read()
 
     write_promos(
