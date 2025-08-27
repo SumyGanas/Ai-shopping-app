@@ -34,12 +34,13 @@ def receive_query(req: https_fn.Request) -> https_fn.Response:
 
     if not cached_response:
         ai_bot = ai.AiBot()
-        promos = cloud_storage.read_promos()
+        uri = cloud_storage.get_uri()
+        
         if deal_type == "todays_deals":
-            resp = ai_bot.get_top_deals(promos)
+            resp = ai_bot.get_top_deals(uri)
 
         elif deal_type == "preferred_deals":
-            resp = ai_bot.get_pref_deals(promos, query)
+            resp = ai_bot.get_pref_deals(uri, query)
 
         if resp is False:
             return https_fn.Response("Error: No AI response generated", status=500)
