@@ -4,14 +4,13 @@ import json
 from firebase_functions import https_fn, options
 from firebase_functions.options import MemoryOption
 from . import ai
-from . import cloud_storage
 from . import fire_store
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 @https_fn.on_request(
-        max_instances=1, cors=options.CorsOptions(cors_origins="*", cors_methods=["get", "post", "options"]), timeout_sec=50, memory=MemoryOption.MB_512
+        max_instances=1, cors=options.CorsOptions(cors_origins="*", cors_methods=["get", "post", "options"]), timeout_sec=80, memory=MemoryOption.MB_512
        )
 def receive_query(req: https_fn.Request) -> https_fn.Response:
     """Receives a query for the firestore DB or the AI and returns the response"""

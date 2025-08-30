@@ -1,5 +1,5 @@
 """Firestore config"""
-import logging, io
+import logging
 from google.cloud import storage
 
 logging.basicConfig(level=logging.INFO)
@@ -39,32 +39,3 @@ def read_promos(bucket_name_override=None, blob_name_override=None):
     promos = blob.download_as_text()
 
     return promos
-
-def new_uri(uri: str):
-    """
-    Replaces URI link with a new one
-    """
-    blob_name = "uri_blob"
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(URI_BUCKET)
-    blob = bucket.blob(blob_name)
-    blob.cache_control = "no-cache"
-    blob.upload_from_string(uri)
-
-def get_uri() -> str:
-    """
-    Returns a pre-existing uri string
-    """
-    blob_name = "uri_blob"
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(URI_BUCKET)
-    blob = bucket.get_blob(blob_name)
-    uri = blob.download_as_text()
-    return uri
-
-def promos_to_bytes():
-    file_bytes_io = io.BytesIO()
-    bucket = BUCKET_NAME
-    blob = bucket.blob("promo-blob")
-    blob.download_to_file(file_bytes_io)
-    return file_bytes_io
