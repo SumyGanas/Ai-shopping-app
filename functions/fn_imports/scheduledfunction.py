@@ -16,13 +16,14 @@ COLLECTION_NAME = "ai_data_cache"
 def databasecleanup(event: scheduler_fn.ScheduledEvent) -> None:
     """Delete old data from and add new data to the firestore database. And generate a new URI"""
     logger.info("Cleanup running")
-    cloud_storage.write_promos()
-    promos = cloud_storage.read_promos()
-
+    sales = fire_store.create_sale_data()
+    promos = fire_store.create_promotional_data()
+    cloud_storage.write_promos(sales+"\n"+promos)
+    promo_bytes = cloud_storage.promos_to_bytes()
+    
     bot = ai.AiBot()
-    uri = bot.generate_uri(promos)
+    uri = bot.upload_file(promo_bytes)
     cloud_storage.new_uri(uri)
     
-    fire_store.delete_old_data()
     logger.info("Cleanup finished")
 
