@@ -34,18 +34,17 @@ def receive_query(req: https_fn.Request) -> https_fn.Response:
 
     if not cached_response:
         ai_bot = ai.AiBot()
-        uri = cloud_storage.get_uri()
         
         if deal_type == "todays_deals":
-            resp = ai_bot.get_top_deals(uri)
+            resp = ai_bot.get_top_deals()
 
         elif deal_type == "preferred_deals":
-            resp = ai_bot.get_pref_deals(uri, query)
+            resp = ai_bot.get_pref_deals(query)
 
         if resp is False:
             return https_fn.Response("Error: No AI response generated", status=500)
         else:
-            fire_store.add_data(query, json.dumps(resp))
+            fire_store.add_to_cache(query,json.dumps(resp))
             ai_resp = fire_store.check_if_cached(str(query))
     else:
         ai_resp = cached_response

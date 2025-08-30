@@ -80,6 +80,7 @@ mock_data
 function_key
 service_account
 *.local
+local.*
 *.env
 *.json
 *.pyc
