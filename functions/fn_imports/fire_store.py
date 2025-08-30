@@ -1,7 +1,6 @@
 import logging, json
 import firebase_admin
 from firebase_admin import firestore
-from google.cloud.firestore_v1.base_query import FieldFilter
 from datetime import datetime, timezone
 import web_scraper
 
@@ -56,7 +55,7 @@ def __find_pref_objs(resp_obj, category: str) -> list:
     document_date = str(datetime.now(timezone.utc)).split()[0]
     coll_ref = db.collection("promotional_data_sale").document(document_date).collection(category)
     pref_objs = []
-    for i in range(3):
+    for i in range(len(ids)):
         doc = coll_ref.document(ids[i]).get().to_dict()
         pref_objs.append(doc)
     return pref_objs
@@ -75,11 +74,11 @@ def __find_promo_objs(resp_obj: list[dict]):
 def __create_prefs_obj(resp_obj, category) -> list[dict]:
     products = __find_pref_objs(resp_obj, category)
     product_data = []
-    for i in products:
+    for i in range(len(products)):
         product_data.append(
             {
                 "product_name":products[i]["name"],
-                "product_relevance_for_customer":products[i]["reason"],
+                "product_relevance_for_customer":str(resp_obj[category][i]["reason_to_buy"]),
                 "product_link":products[i]["url"],
                 "product_original_price":products[i]["list_price"],
                 "product_sale_price":products[i]["sale_price"]
@@ -94,7 +93,7 @@ def __create_promo_obj(resp_obj) -> list[dict]:
         product_data.append(
             {
                 "product_name":products[i]["name"],
-                "product_relevance_for_customer":products[i]["reason"],
+                "product_relevance_for_customer":str(resp_obj[i]["deal_analysis"]),
                 "product_link":products[i]["url"],
                 "product_original_price":products[i]["list_price"],
                 "product_sale_price":products[i]["sale_price"]
@@ -130,12 +129,13 @@ def __format_sale_data(category) -> list:
         __add_sale(category,item[i]["id"],item[i]["name"],item[i]["url"],item[i]["list_price"],item[i]["sale_price"],item[i]["discount"])
         promo = {
             "id": item[i]["id"],
-            "name": item[i]["name"]
+            "name": item[i]["name"],
+            "discount_percent":item[i]["discount"]
         }
         s.append(promo)
     return s
 
-def create_sale_data(category: str) -> str:
+def create_sale_data() -> str:
     discount = {"discounts":{
         "makeup_discounts":__format_sale_data("makeup"),
         "skincare_discounts":__format_sale_data("skincare"),
@@ -174,8 +174,8 @@ def check_if_cached(query: str):
 
     if doc.exists:
         doc_data = doc.to_dict()
-        if query in doc_data:
-            return doc_data[query]
+        if str(query) in doc_data:
+            return doc_data[str(query)]
     else:
         default_data = {
             'created_at': datetime.now(timezone.utc),
