@@ -74,6 +74,7 @@ node_modules/
 # dataconnect generated files
 .dataconnect
 
+tmp.*
 venv
 .venv
 mock_data

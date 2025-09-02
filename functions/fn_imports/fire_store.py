@@ -1,8 +1,9 @@
 import logging, json
 import firebase_admin
 from firebase_admin import firestore
-from datetime import datetime, timezone
-import web_scraper
+from datetime import datetime, timezone, timedelta
+from . import web_scraper
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -60,16 +61,21 @@ def __find_pref_objs(resp_obj, category: str) -> list:
         pref_objs.append(doc)
     return pref_objs
 
-def __find_promo_objs(resp_obj: list[dict]):
+def __find_promo_objs(resp_obj: list[dict], category: str):
+    """
+    Finds the products from Gemini's response in the database and returns the products
+    """
+    objs = resp_obj["deals"]
     document_date = str(datetime.now(timezone.utc)).split()[0]
-    promo_objs = []
-    doc_ref = db.collection("promotional_data_gwp_bmsm_td").document(document_date)
-    promos = doc_ref.get().to_dict()
-    for i in range(len(resp_obj)):
-        k = str(resp_obj[i]["product_id"])
-        promo_objs.append(promos.get(k))
+    coll_ref = db.collection("promotional_data_sale").document(document_date).collection(category)
+    pref_objs = []
+    for i in range(len(objs)):
+        product_id = objs[i]["product_id"]
+        doc = coll_ref.document(product_id).get().to_dict()
+        if doc is not None:
+            pref_objs.append(doc)
 
-    return promo_objs
+    return pref_objs
 
 def __create_prefs_obj(resp_obj, category) -> list[dict]:
     products = __find_pref_objs(resp_obj, category)
@@ -87,18 +93,27 @@ def __create_prefs_obj(resp_obj, category) -> list[dict]:
     return product_data
 
 def __create_promo_obj(resp_obj) -> list[dict]:
-    products = __find_promo_objs(resp_obj)
+    """
+    Returns a list of products in today's deals
+    """
+    p_m = __find_promo_objs(resp_obj, "makeup")
+    p_s = __find_promo_objs(resp_obj, "skincare")
+    p_h = __find_promo_objs(resp_obj, "haircare")
+    products = p_m+p_s+p_h
     product_data = []
-    for i in products:
+    if len(products) > 10:
+        products = products[:10]
+    for i in range(len(products)):
         product_data.append(
             {
                 "product_name":products[i]["name"],
-                "product_relevance_for_customer":str(resp_obj[i]["deal_analysis"]),
+                "product_relevance_for_customer":str(resp_obj["deals"][i]["deal_analysis"]),
                 "product_link":products[i]["url"],
                 "product_original_price":products[i]["list_price"],
                 "product_sale_price":products[i]["sale_price"]
             }
         )
+    
     return product_data
 
 def __add_sale(collection_name: str, product_id_sku, name, url, list_price, sale_price, discount):
@@ -168,7 +183,8 @@ def check_if_cached(query: str):
     checks if ai response data is cached in database.
     Returns data if true, or stores it and returns it if false.
     """
-    document_date = str(datetime.now(timezone.utc)).split()[0]
+    todays_date = datetime.now(timezone(timedelta(hours=-7))).date()
+    document_date = str(todays_date).split()[0]
     doc_ref = db.collection(COLLECTION_NAME).document(document_date)
     doc = doc_ref.get()
 
@@ -178,7 +194,7 @@ def check_if_cached(query: str):
             return doc_data[str(query)]
     else:
         default_data = {
-            'created_at': datetime.now(timezone.utc),
+            'created_at': str(todays_date),
             query: {}
         }
         doc_ref.set(default_data)
@@ -189,15 +205,15 @@ def add_to_cache(deal_type: str, query: tuple[str], resp_obj):
     """
     adds new query data to the ai-response-cache
     """
+    todays_date = datetime.now(timezone(timedelta(hours=-7))).date()
     if deal_type == "todays_deals":
-        deals = __create_promo_obj(resp_obj)
-        document_date = str(datetime.now(timezone.utc)).split()[0]
+        document_date = str(todays_date).split()[0]
         doc_ref = db.collection(COLLECTION_NAME).document(document_date)
+        deals = __create_promo_obj(resp_obj)
         data = {
-        key : {
                 "todays_deals":deals
             }
-        }
+
         doc_ref.set(data, merge=True)
     else:
         makeup_prefs = __create_prefs_obj(resp_obj, "makeup")
@@ -215,3 +231,11 @@ def add_to_cache(deal_type: str, query: tuple[str], resp_obj):
             }
         }
         doc_ref.set(data, merge=True)
+
+
+with open("/Users/sumy/Desktop/scraperbot/functions/local.ai_resp_promo.txt","r") as file:
+    p = file.read()
+
+cached = check_if_cached("todays_deals")
+if not cached:
+    add_to_cache("todays_deals","todays_deals",json.loads(p))
