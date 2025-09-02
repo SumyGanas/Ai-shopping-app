@@ -161,7 +161,3 @@ class AiBot():
         except json.JSONDecodeError:
             return json.loads(response.text) 
 
-ai = AiBot()
-deals = ai.get_top_deals()
-with open("local.ai_resp_promo.txt","w") as file:
-    file.write(str(deals))
