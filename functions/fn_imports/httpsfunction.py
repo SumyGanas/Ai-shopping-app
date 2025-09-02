@@ -47,4 +47,8 @@ def receive_query(req: https_fn.Request) -> https_fn.Response:
     else:
         ai_resp = cached_response
 
-    return https_fn.Response(ai_resp, status=200)
+    try:
+        r = json.dumps(ai_resp, ensure_ascii=False, separators=(',', ':'))
+        return https_fn.Response(ai_resp, status=200)
+    except json.JSONDecodeError:
+        return https_fn.Response(None, status=500)
