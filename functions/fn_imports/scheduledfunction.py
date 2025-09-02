@@ -1,12 +1,8 @@
 """database cleanup module"""
-import time
-import logging, datetime
+import logging
 from firebase_functions import scheduler_fn
 from firebase_functions.options import MemoryOption
-import cloud_storage
-import fire_store
-import ai
-
+from . import cloud_storage, fire_store
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 BUCKET_NAME = "promo_list_for_ai_scraper_123"

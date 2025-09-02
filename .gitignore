@@ -70,6 +70,7 @@ node_modules/
 
 venv
 .venv
+*/tmp.*
 mock_data
 function_key
 service_account

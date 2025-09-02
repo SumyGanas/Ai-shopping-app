@@ -3,8 +3,7 @@ import logging
 import json
 from firebase_functions import https_fn, options
 from firebase_functions.options import MemoryOption
-from . import ai
-from . import fire_store
+from . import ai, fire_store
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,7 +42,7 @@ def receive_query(req: https_fn.Request) -> https_fn.Response:
         if resp is False:
             return https_fn.Response("Error: No AI response generated", status=500)
         else:
-            fire_store.add_to_cache(query,json.dumps(resp))
+            fire_store.add_to_cache(deal_type, query, resp)
             ai_resp = fire_store.check_if_cached(str(query))
     else:
         ai_resp = cached_response

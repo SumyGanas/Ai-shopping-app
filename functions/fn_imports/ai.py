@@ -1,8 +1,8 @@
 """Module to connect to gemini API"""
-import logging, os, re, json, io
+import logging, os, re, json
 from google import genai
 from google.genai import types
-import cloud_storage
+from . import cloud_storage
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -97,7 +97,7 @@ class AiBot():
         query: tuple for preferred_deals or str for todays_deals
         """
         
-        prompt = f"""Using the provided file of deals, recommend three each of makeup, skincare, and haircare products for a person with {query[0]} skin with {query[1]}, {query[2]} hair that is {query[3]}, and likes a {query[4]} makeup look. Respond with the product id field and a brief explanation of why each product is a good fit. Do not fetch or invent the product_id. Only respond with the product_id of the chosen product and a reason to buy.Output valid JSON matching the schema. Always return 3 items per category; if no perfect match, choose the best available and explain why.  
+        prompt = f"""Using the provided file of deals, recommend three each of makeup, skincare, and haircare products for a person with {query[0]} skin with {query[1]}, {query[2]} hair that is {query[3]}, and likes a {query[4]} makeup look. Respond with the product id field and a brief explanation of why each product is a good fit. Do not hallucinate or invent products or product ids that don't exist in the data. Only respond with the product_id of the chosen product and a reason to buy.Output valid JSON matching the schema. Always return 3 items per category; if no perfect match, choose the best available and explain why.  
         Evidence:  
         - Actives if named or with clear synonyms are highest tier evidence: salicylic/BHA = acne, benzoyl peroxide = acne, retinol/retinal = anti-aging/acne, niacinamide = oil/redness/pigmentation, azelaic acid = acne/redness, vitamin C/ascorbic = pigmentation/anti-aging, hyaluronic/HA = dehydration, ceramides = dryness/barrier, SPF ## = suncare.  
         - Marketing cues (hydrating, plumping, brightening, clarifying, soothing, barrier) are lower tier evidence.Ranking: Direct active match (Best), Synonym match (Better),  3. Marketing descriptor (Good), 4. Discount percentage (Okay)"""
@@ -137,7 +137,7 @@ class AiBot():
         """
         Queries the AI for the top 10 best deals
         """
-        prompt = f"""Identify the **top 10 best deals** on beauty products from the provided list. Respond with the product id and a brief explanation of why each product provides good value. Output valid JSON matching the provided schema. Do not fetch or invent data. Be concise and factual; never invent product details. Always return 10 items."""
+        prompt = f"""Identify the **top 10 best deals** on beauty products from the provided data. Respond with the product id and a brief explanation of why each product provides good value. Output valid JSON matching the provided schema. **Do not hallucinate or invent products or product ids that don't exist in the data.** Be concise and factual; never invent product details. Always return 10 items."""
         client = genai.Client(api_key=self.api_key)
         promos = cloud_storage.read_promos()
 
@@ -151,7 +151,7 @@ class AiBot():
             model="gemini-2.5-flash", contents=[prompt, myfile],
             config = types.GenerateContentConfig(
             response_mime_type="application/json",
-            response_schema=self.pref_schema,
+            response_schema=self.td_schema,
             system_instruction="""You are an expert deal analyzer that can combine different promotions and discounts to get the maximum value in a purchase."""
              ))
             clean_response = self.clean_json(response.text)
@@ -160,3 +160,8 @@ class AiBot():
             return "Empty/incorrect prompt provided to the AI"
         except json.JSONDecodeError:
             return json.loads(response.text) 
+
+ai = AiBot()
+deals = ai.get_top_deals()
+with open("local.ai_resp_promo.txt","w") as file:
+    file.write(str(deals))
