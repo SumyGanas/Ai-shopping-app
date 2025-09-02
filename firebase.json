@@ -10,6 +10,8 @@
       "codebase": "default",
       "ignore": [
         "venv",
+	"local.*",
+	"tests",
         ".git",
         "firebase-debug.log",
         "firebase-debug.*.log",
