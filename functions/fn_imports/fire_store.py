@@ -231,11 +231,3 @@ def add_to_cache(deal_type: str, query: tuple[str], resp_obj):
             }
         }
         doc_ref.set(data, merge=True)
-
-
-with open("/Users/sumy/Desktop/scraperbot/functions/local.ai_resp_promo.txt","r") as file:
-    p = file.read()
-
-cached = check_if_cached("todays_deals")
-if not cached:
-    add_to_cache("todays_deals","todays_deals",json.loads(p))
