@@ -52,7 +52,7 @@ def __find_pref_objs(res, category: str) -> list:
     """
     Finds the products from Gemini's response in the database and returns the products
     """
-    resp_obj = ast.literal_eval(res)
+    resp_obj = ast.literal_eval(str(res))
     ids = (str(resp_obj[category][0]["product_id"]),str(resp_obj[category][1]["product_id"]),str(resp_obj[category][2]["product_id"]))
     document_date = str(datetime.now(timezone.utc)).split()[0]
     coll_ref = db.collection("promotional_data_sale").document(document_date).collection(category)
@@ -66,7 +66,7 @@ def __find_promo_objs(resp_obj, category: str):
     """
     Finds the products from Gemini's response in the database and returns the products
     """
-    python_dict = ast.literal_eval(resp_obj)
+    python_dict = ast.literal_eval(str(resp_obj))
     objs = python_dict["deals"]
     document_date = str(datetime.now(timezone.utc)).split()[0]
     coll_ref = db.collection("promotional_data_sale").document(document_date).collection(category)
@@ -80,7 +80,7 @@ def __find_promo_objs(resp_obj, category: str):
     return promo_objs
 
 def __create_prefs_obj(res, category) -> list[dict]:
-    resp_obj = ast.literal_eval(res)
+    resp_obj = ast.literal_eval(str(res))
     products = __find_pref_objs(resp_obj, category)
     product_data = []
     for i in range(len(products)):
@@ -99,7 +99,7 @@ def __create_promo_obj(res) -> list[dict]:
     """
     Returns a list of products in today's deals
     """
-    resp_obj = ast.literal_eval(res)
+    resp_obj = ast.literal_eval(str(res))
     p_m = __find_promo_objs(resp_obj, "makeup")
     p_s = __find_promo_objs(resp_obj, "skincare")
     p_h = __find_promo_objs(resp_obj, "haircare")
@@ -209,7 +209,7 @@ def add_to_cache(deal_type: str, query: tuple[str], res):
     """
     adds new query data to the ai-response-cache
     """
-    resp_obj = ast.literal_eval(res)
+    resp_obj = ast.literal_eval(str(res))
     todays_date = datetime.now(timezone(timedelta(hours=-7))).date()
     if deal_type == "todays_deals":
         document_date = str(todays_date).split()[0]
