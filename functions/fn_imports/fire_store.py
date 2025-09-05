@@ -1,8 +1,9 @@
-import logging, json
+import logging, json, ast
 import firebase_admin
 from firebase_admin import firestore
 from datetime import datetime, timezone, timedelta
-from . import web_scraper
+#from . import web_scraper
+import web_scraper
 
 
 logging.basicConfig(level=logging.INFO)
@@ -48,10 +49,11 @@ class Product:
                 sale_price={self.sale_price}\
             )"
 
-def __find_pref_objs(resp_obj, category: str) -> list:
+def __find_pref_objs(res, category: str) -> list:
     """
     Finds the products from Gemini's response in the database and returns the products
     """
+    resp_obj = ast.literal_eval(res)
     ids = (str(resp_obj[category][0]["product_id"]),str(resp_obj[category][1]["product_id"]),str(resp_obj[category][2]["product_id"]))
     document_date = str(datetime.now(timezone.utc)).split()[0]
     coll_ref = db.collection("promotional_data_sale").document(document_date).collection(category)
@@ -61,23 +63,25 @@ def __find_pref_objs(resp_obj, category: str) -> list:
         pref_objs.append(doc)
     return pref_objs
 
-def __find_promo_objs(resp_obj: list[dict], category: str):
+def __find_promo_objs(resp_obj, category: str):
     """
     Finds the products from Gemini's response in the database and returns the products
     """
-    objs = resp_obj["deals"]
+    python_dict = ast.literal_eval(resp_obj)
+    objs = python_dict["deals"]
     document_date = str(datetime.now(timezone.utc)).split()[0]
     coll_ref = db.collection("promotional_data_sale").document(document_date).collection(category)
-    pref_objs = []
+    promo_objs = []
     for i in range(len(objs)):
         product_id = objs[i]["product_id"]
         doc = coll_ref.document(product_id).get().to_dict()
         if doc is not None:
-            pref_objs.append(doc)
+            promo_objs.append(doc)
 
-    return pref_objs
+    return promo_objs
 
-def __create_prefs_obj(resp_obj, category) -> list[dict]:
+def __create_prefs_obj(res, category) -> list[dict]:
+    resp_obj = ast.literal_eval(res)
     products = __find_pref_objs(resp_obj, category)
     product_data = []
     for i in range(len(products)):
@@ -92,10 +96,11 @@ def __create_prefs_obj(resp_obj, category) -> list[dict]:
         )
     return product_data
 
-def __create_promo_obj(resp_obj) -> list[dict]:
+def __create_promo_obj(res) -> list[dict]:
     """
     Returns a list of products in today's deals
     """
+    resp_obj = ast.literal_eval(res)
     p_m = __find_promo_objs(resp_obj, "makeup")
     p_s = __find_promo_objs(resp_obj, "skincare")
     p_h = __find_promo_objs(resp_obj, "haircare")
@@ -201,10 +206,11 @@ def check_if_cached(query: str):
 
     return False
 
-def add_to_cache(deal_type: str, query: tuple[str], resp_obj):
+def add_to_cache(deal_type: str, query: tuple[str], res):
     """
     adds new query data to the ai-response-cache
     """
+    resp_obj = ast.literal_eval(res)
     todays_date = datetime.now(timezone(timedelta(hours=-7))).date()
     if deal_type == "todays_deals":
         document_date = str(todays_date).split()[0]
@@ -231,3 +237,8 @@ def add_to_cache(deal_type: str, query: tuple[str], resp_obj):
             }
         }
         doc_ref.set(data, merge=True)
+
+with open("/Users/sumy/Desktop/scraperbot/functions/local.ai_resp_promo.txt", "r") as file:
+    p = file.read()
+
+print(__find_promo_objs(p, "makeup"))

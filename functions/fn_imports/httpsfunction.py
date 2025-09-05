@@ -1,6 +1,5 @@
 """HTTPS function module"""
-import logging
-import json
+import logging, json
 from firebase_functions import https_fn, options
 from firebase_functions.options import MemoryOption
 from . import ai, fire_store
