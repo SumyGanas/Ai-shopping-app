@@ -2,8 +2,7 @@ import logging, json, ast
 import firebase_admin
 from firebase_admin import firestore
 from datetime import datetime, timezone, timedelta
-#from . import web_scraper
-import web_scraper
+from . import web_scraper
 
 
 logging.basicConfig(level=logging.INFO)
@@ -237,8 +236,3 @@ def add_to_cache(deal_type: str, query: tuple[str], res):
             }
         }
         doc_ref.set(data, merge=True)
-
-with open("/Users/sumy/Desktop/scraperbot/functions/local.ai_resp_promo.txt", "r") as file:
-    p = file.read()
-
-print(__find_promo_objs(p, "makeup"))
