@@ -72,6 +72,7 @@ sortedcontainers==2.4.0
 soupsieve==2.7
 starlette==0.47.2
 tenacity==8.5.0
+tolerantjson==1.0.0
 trio==0.30.0
 trio-websocket==0.12.2
 typing-inspection==0.4.1

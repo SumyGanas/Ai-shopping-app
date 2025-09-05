@@ -1,6 +1,5 @@
 """Parser bot"""
 import re
-import unicodedata
 import json
 import requests
 from bs4 import BeautifulSoup
