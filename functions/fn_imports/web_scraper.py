@@ -140,10 +140,3 @@ class DealGenerator():
 
         except (MaxRetryError, AttributeError) as exc:
             raise RuntimeError("Issue with beautiful soup instance") from exc
-        
-
-x = DealGenerator()
-with open("./json_promos.txt","w", encoding="utf-8") as file:
-    y = x.get_promotional_data()
-    file.write(str(y))
-    file.close()
