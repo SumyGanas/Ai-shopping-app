@@ -1,5 +1,6 @@
 """Module to connect to gemini API"""
-import logging, os, re, json, ast
+import logging, os, re, json
+import tolerantjson as tjson
 from google import genai
 from google.genai import types
 from . import cloud_storage
@@ -123,12 +124,22 @@ class AiBot():
             return "Empty/incorrect prompt provided to the AI"
 
     def clean_json(self, text) -> dict:
-        """Clean json from markdown"""
+        """Use regex to fix any errors in the AI's json response schema"""
+        subst = " inch "
+        regex = r"(?<=[A-Za-z0-9])'' (?=[A-Za-z0-9])" #any ''
+        p = re.sub(regex, subst, text)
+        
+        quote_fixed_str = p.replace("'","\"")
+
+        subst1 = "'"
+        regex1 = r"(?<=[A-Za-z0-9])\"(?=[A-Za-z0-9])" #possessive single quotes
+        p1 = re.sub(regex1, subst1, quote_fixed_str)
+    
         try:
-            python_dict = ast.literal_eval(text)
-            valid_json_str = json.dumps(python_dict)
-            return valid_json_str
-        except json.JSONDecodeError as e:
+            python_dict = tjson.tolerate(p1)
+            valid_json = json.dumps(python_dict)
+            return valid_json
+        except tjson.parser.ParseError as e:
             logger.error(f"Error compiling response to json string: {e}")
         except (ValueError, SyntaxError) as e:
             logger.error(f"Error cleaning json response from AI: {e}")
@@ -158,4 +169,3 @@ class AiBot():
             return clean_response
         except UnboundLocalError:
             return "Empty/incorrect prompt provided to the AI"
-
