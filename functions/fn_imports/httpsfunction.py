@@ -20,15 +20,15 @@ def receive_query(req: https_fn.Request) -> https_fn.Response:
     try:
         query = data["todays_deals"]
         deal_type = "todays_deals"
+        cached_response = fire_store.check_if_cached(deal_type)
     except KeyError:
         try:
             query = (data['skin_types'], data['skin_concerns'], data['hair_types'],
                     data['hair_concerns'], data['makeup_preferences'])
             deal_type = "preferred_deals"
+            cached_response = fire_store.check_if_cached(str(query))
         except KeyError as exc:
             raise RuntimeError("Unknown Query") from exc
-
-    cached_response = fire_store.check_if_cached(str(query))
 
     if not cached_response:
         ai_bot = ai.AiBot()
@@ -49,6 +49,6 @@ def receive_query(req: https_fn.Request) -> https_fn.Response:
 
     try:
         r = json.dumps(ai_resp, ensure_ascii=False, separators=(',', ':'))
-        return https_fn.Response(ai_resp, status=200)
+        return https_fn.Response(str(ai_resp), status=200)
     except json.JSONDecodeError:
-        return https_fn.Response(None, status=500)
+        return https_fn.Response("ERROR: Gemini response cannot be parsed", status=500)

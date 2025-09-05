@@ -1,5 +1,5 @@
 """Module to connect to gemini API"""
-import logging, os, re, json
+import logging, os, re, json, ast
 from google import genai
 from google.genai import types
 from . import cloud_storage
@@ -7,7 +7,7 @@ from . import cloud_storage
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class AiBot():
+class AiBot(): 
     """Bot"""
     def __init__(self):
         self.api_key = os.environ.get("GEMINI_API_KEY")
@@ -121,17 +121,17 @@ class AiBot():
             return clean_response
         except UnboundLocalError:
             return "Empty/incorrect prompt provided to the AI"
-        except json.JSONDecodeError:
-            return json.loads(response.text) 
 
     def clean_json(self, text) -> dict:
         """Clean json from markdown"""
-        markdown_block = re.match(r"^```(?:json)?\s*\n(.+?)\n```$", text.strip(), re.DOTALL)
-        if markdown_block:
-            cleaned = markdown_block.group(1).strip()
-        else:
-            cleaned = text.strip()
-        return json.loads(cleaned)
+        try:
+            python_dict = ast.literal_eval(text)
+            valid_json_str = json.dumps(python_dict)
+            return valid_json_str
+        except json.JSONDecodeError as e:
+            logger.error(f"Error compiling response to json string: {e}")
+        except (ValueError, SyntaxError) as e:
+            logger.error(f"Error cleaning json response from AI: {e}")
 
     def get_top_deals(self) -> dict:
         """
@@ -158,6 +158,4 @@ class AiBot():
             return clean_response
         except UnboundLocalError:
             return "Empty/incorrect prompt provided to the AI"
-        except json.JSONDecodeError:
-            return json.loads(response.text) 
 
