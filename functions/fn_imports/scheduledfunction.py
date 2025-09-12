@@ -13,6 +13,7 @@ COLLECTION_NAME = "ai_data_cache"
 @scheduler_fn.on_schedule(schedule="59 04 * * *", memory=MemoryOption.MB_512, timeout_sec=120, max_instances=1)
 def databasecleanup(event: scheduler_fn.ScheduledEvent) -> None:
     """Update the daily promotional data"""
-    sales = fire_store.create_sale_data()
-    promos = fire_store.create_promotional_data()
+    db = fire_store.Promotions()
+    sales = db.update_sales()
+    promos = db.update_promotions()
     cloud_storage.write_promos(sales+"\n"+promos)

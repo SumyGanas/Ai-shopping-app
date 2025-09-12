@@ -29,23 +29,28 @@ class DealGenerator():
         
         soup = self.__get_ulta_soup(url)
         promo_list = []
-        items = soup.select("li.ProductListingResults__productCard a")
+        card = "li.ProductListingResults__productCard a"
+        items = soup.select(card)
         for i,item in enumerate(items):
             item_type = item.select_one("div.ProductCard__image")
             if item_type is not None and item_type.text != "Sponsored":
-                s = item.contents[0].select("div.ProductPricing")[0].select("span")[0].text
+                s = item.contents[0].select(
+                    "div.ProductPricing")[0].select(
+                        "span")[0].text
                 sp = re.search(r"\d+(?:\.\d+)?", s).group()
                 l = item.contents[0].select("div.ProductPricing")[0].select("span")[2].text
                 lp = re.search(r"\d+(?:\.\d+)?", l).group()
-                obj = {i : {
-                        "id": soup.select("li.ProductListingResults__productCard")[i].attrs["data-sku-id"],
+                obj = {
+                        "sku": soup.select(
+                            "li.ProductListingResults__productCard"
+                            )[i].attrs["data-sku-id"],
                         "name": item.contents[0].find("img").attrs["alt"],
                         "sale_price": float(sp),
                         "list_price": float(lp),
                         "url": item.attrs["href"],
                         "discount": int(((float(lp)-float(sp))/float(lp))*100),
                         "reason":""
-                    }}
+                    }
                 promo_list.append(obj)
         
         pl = promo_list if len(promo_list) else ""
@@ -94,48 +99,17 @@ class DealGenerator():
         pl = promo_list if len(promo_list) else ""
         return pl
     
-    def get_sale_data(self, item_type: str):
+    def get_sale_data(self, item_type: str) -> list[dict]:
         try:
             sale = self.__get_ulta_sales(item_type)
             return sale
         except (MaxRetryError, AttributeError) as exc:
             raise RuntimeError("Issue with beautiful soup instance") from exc
 
-    def get_promotional_data(self):
+    def get_promotional_data(self) -> list[str]:
         gwp = self.__get_gwp()
         td = self.__get_td_promos()
         bmsm = self.__get_bmsm()
 
         return gwp + td + bmsm
 
-    def get_all_data(self):
-        """Returns all promos as a string"""
-        try:
-
-            makeup = self.__get_ulta_sales("https://www.ulta.com/promotion/sale?category=makeup")
-            
-            skincare = self.__get_ulta_sales("https://www.ulta.com/promotion/sale?category=skin-care")
-            
-            haircare = self.__get_ulta_sales("https://www.ulta.com/promotion/sale?category=hair")
-           
-            gwp = self.__get_gwp()
-             
-            td = self.__get_td_promos()
-            
-            bmsm = self.__get_bmsm()
-
-            products = {
-                "discounts" : {
-                "makeup":makeup,
-                "skincare":skincare,
-                "haircare":haircare
-                },
-                "Gift with purchase":gwp,
-                "Daily Deals":td,
-                "BOGO":bmsm
-            }
-
-            return json.dumps(products, ensure_ascii=False, separators=(',', ':'))
-
-        except (MaxRetryError, AttributeError) as exc:
-            raise RuntimeError("Issue with beautiful soup instance") from exc

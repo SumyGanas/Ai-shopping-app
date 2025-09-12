@@ -1,142 +1,44 @@
 """Module to connect to gemini API"""
-import logging, os, re, json
+import logging, os, json
 import tolerantjson as tjson
 from google import genai
+from pydantic import BaseModel, ConfigDict, RootModel
 from google.genai import types
 from . import cloud_storage
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+config = ConfigDict(arbitrary_types_allowed=True)
+
+class Product(BaseModel):
+    product_sku: str
+    reason_to_buy: str
+
+class PrefProducts(RootModel[list[Product]]):
+    model_config = config
+
+class Preferences_Schema(BaseModel):
+    makeup: PrefProducts
+    skincare: PrefProducts
+    haircare: PrefProducts
+    model_config = config
+
+class TodaysDeals_Schema(RootModel[list[Product]]):
+    model_config = config
+
 class AiBot(): 
     """Bot"""
     def __init__(self):
         self.api_key = os.environ.get("GEMINI_API_KEY")
         self.model = "gemini-2.5-flash"
-        self.pref_schema = {
-    "type": "object",
-    "properties": {
-        "makeup": {
-            "type": "array",
-            "minItems": 3,
-            "maxItems": 3,
-            "items": {
-                "type": "object",
-                "properties": {
-                    "product_id": {"type": "string"},
-                    "reason_to_buy": {"type": "string"}
-                },
-                "required": [
-                    "product_id",
-                    "reason_to_buy",
-                ]
-            }
-        },
-        "skincare": {
-            "type": "array",
-            "minItems": 3,
-            "maxItems": 3,
-            "items": {
-                "type": "object",
-                "properties": {
-                    "product_id": {"type": "string"},
-                    "reason_to_buy": {"type": "string"}
-                },
-                "required": [
-                    "product_id",
-                    "reason_to_buy",
-                ]
-            }
-        },
-        "haircare": {
-            "type": "array",
-            "minItems": 3,
-            "maxItems": 3,
-            "items": {
-                "type": "object",
-                "properties": {
-                    "product_id": {"type": "string"},
-                    "reason_to_buy": {"type": "string"}
-                },
-                "required": [
-                    "product_id",
-                    "reason_to_buy",
-                ]
-            }
-        }
-    },
-    "required": ["makeup", "skincare", "haircare"]
-}
-        self.td_schema = {
-    "type": "object",
-    "properties": {
-        "deals": {
-            "type": "array",
-            "minItems": 10,
-            "maxItems": 10,
-            "items": {
-                "type": "object",
-                "properties": {
-                    "product_id": {"type": "string"},
-                    "deal_analysis": {"type": "string"}
-                },
-                "required": [
-                    "product_id",
-                    "deal_analysis"
-                ]
-            }
-        }
-    },
-    "required": ["deals"]
-}
 
-
-    def get_pref_deals(self, query: tuple[str] | str) -> dict:
+    def __validate_json(self, text) -> str:
         """
-        Queries the AI for preference based sales or current best sales
-        uri: str
-        query: tuple for preferred_deals or str for todays_deals
+        Validates the AI response's json schema
         """
-        
-        prompt = f"""Using the provided file of deals, recommend three each of makeup, skincare, and haircare products for a person with {query[0]} skin with {query[1]}, {query[2]} hair that is {query[3]}, and likes a {query[4]} makeup look. Respond with the product id field and a brief explanation of why each product is a good fit. Do not hallucinate or invent products or product ids that don't exist in the data. Only respond with the product_id of the chosen product and a reason to buy.Output valid JSON matching the schema. Always return 3 items per category; if no perfect match, choose the best available and explain why.  
-        Evidence:  
-        - Actives if named or with clear synonyms are highest tier evidence: salicylic/BHA = acne, benzoyl peroxide = acne, retinol/retinal = anti-aging/acne, niacinamide = oil/redness/pigmentation, azelaic acid = acne/redness, vitamin C/ascorbic = pigmentation/anti-aging, hyaluronic/HA = dehydration, ceramides = dryness/barrier, SPF ## = suncare.  
-        - Marketing cues (hydrating, plumping, brightening, clarifying, soothing, barrier) are lower tier evidence.Ranking: Direct active match (Best), Synonym match (Better),  3. Marketing descriptor (Good), 4. Discount percentage (Okay)"""
-        client = genai.Client(api_key=self.api_key)
-        promos = cloud_storage.read_promos()
-
-        with open("tmp.txt", "w") as file:
-            file.write(promos)
-
-        myfile = client.files.upload(file="tmp.txt")
-        
         try:
-            response = client.models.generate_content(
-            model="gemini-2.5-flash", contents=[prompt, myfile],
-            config = types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=self.pref_schema,
-            system_instruction="""You are an expert in beauty products."""
-             ))
-            clean_response = self.clean_json(response.text)
-            return clean_response
-        except UnboundLocalError:
-            return "Empty/incorrect prompt provided to the AI"
-
-    def clean_json(self, text) -> dict:
-        """Use regex to fix any errors in the AI's json response schema"""
-        subst = " inch "
-        regex = r"(?<=[A-Za-z0-9])'' (?=[A-Za-z0-9])" #any ''
-        p = re.sub(regex, subst, text)
-        
-        quote_fixed_str = p.replace("'","\"")
-
-        subst1 = "'"
-        regex1 = r"(?<=[A-Za-z0-9])\"(?=[A-Za-z0-9])" #possessive single quotes
-        p1 = re.sub(regex1, subst1, quote_fixed_str)
-    
-        try:
-            python_dict = tjson.tolerate(p1)
+            python_dict = tjson.tolerate(text)
             valid_json = json.dumps(python_dict)
             return valid_json
         except tjson.parser.ParseError as e:
@@ -144,11 +46,17 @@ class AiBot():
         except (ValueError, SyntaxError) as e:
             logger.error(f"Error cleaning json response from AI: {e}")
 
-    def get_top_deals(self) -> dict:
+    def get_pref_deals(self, query: tuple[str] | str) -> str:
         """
-        Queries the AI for the top 10 best deals
+        Queries the AI for preference based sales or current best sales\n
+        Args:
+        - query: tuple for preferred_deals or str for todays_deals
         """
-        prompt = f"""Identify the **top 10 best deals** on beauty products from the provided data. Respond with the product id and a brief explanation of why each product provides good value. Output valid JSON matching the provided schema. **Do not hallucinate or invent products or product ids that don't exist in the data.** Be concise and factual; never invent product details. Always return 10 items."""
+        
+        prompt = f"""Using the provided file of deals and the evidence, recommend three each of makeup, skincare, and haircare products for a person with the given concerns. Return the product id and a brief explanation of why each product is suitable. Do not hallucinate or invent products or product ids that don't exist in the data. Output valid JSON matching the schema 
+        - Evidence: Named active ingredients (retinol etc.) or their synonyms are highest tier evidence. Marketing cues (hydrating, clarifying, barrier, etc.) are lower tier evidence.
+        - Concerns: {query[0]} skin with {query[1]}, {query[2]} hair that is {query[3]}, and likes a {query[4]} makeup look
+        """
         client = genai.Client(api_key=self.api_key)
         promos = cloud_storage.read_promos()
 
@@ -162,10 +70,39 @@ class AiBot():
             model="gemini-2.5-flash", contents=[prompt, myfile],
             config = types.GenerateContentConfig(
             response_mime_type="application/json",
-            response_schema=self.td_schema,
+            response_schema= Preferences_Schema,
+            system_instruction="""You are an expert in reccomending beauty products for specific concerns."""
+             ))
+            
+            clean_response =  self.__validate_json(response.text)
+            return clean_response
+        except UnboundLocalError:
+            return "Empty/incorrect prompt provided to the AI"
+
+    def get_top_deals(self) -> str:
+        """
+        Queries the AI for the top 10 best deals\n
+        Args:
+        - None
+        """
+        prompt = f"""Identify the **top 10 best deals** on beauty products from the provided data. Respond with the product id and a brief explanation of why each product provides good value. Output valid JSON matching the provided schema. Avoid echoing the product name in the reason to buy. **Do not hallucinate or invent products or product ids that don't exist in the data.** Never invent product details. Always return exactly 10 distinct items."""
+        client = genai.Client(api_key=self.api_key)
+        promos = cloud_storage.read_promos()
+
+        with open("tmp.txt", "w") as file:
+            file.write(promos)
+
+        myfile = client.files.upload(file="tmp.txt")
+        
+        try:
+            response = client.models.generate_content(
+            model="gemini-2.5-flash", contents=[prompt, myfile],
+            config = types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema= TodaysDeals_Schema,
             system_instruction="""You are an expert deal analyzer that can combine different promotions and discounts to get the maximum value in a purchase."""
              ))
-            clean_response = self.clean_json(response.text)
+            clean_response = self.__validate_json(response.text)
             return clean_response
         except UnboundLocalError:
             return "Empty/incorrect prompt provided to the AI"
