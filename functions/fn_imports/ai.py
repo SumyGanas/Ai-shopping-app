@@ -1,4 +1,4 @@
-"""Module to connect to gemini API"""
+"""AI Module to connect to gemini API"""
 import logging, os, json
 import tolerantjson as tjson
 from google import genai
@@ -46,28 +46,29 @@ class AiBot():
         except (ValueError, SyntaxError) as e:
             logger.error(f"Error cleaning json response from AI: {e}")
 
-    def get_pref_deals(self, query: tuple[str] | str) -> str:
+    def get_pref_deals(self, query: tuple[str] | str, TEST_PROMPT=None, TEST_FILE=None, TEST_PROMOS=None) -> str:
         """
         Queries the AI for preference based sales or current best sales\n
         Args:
         - query: tuple for preferred_deals or str for todays_deals
         """
         
-        prompt = f"""Using the provided file of deals and the evidence, recommend three each of makeup, skincare, and haircare products for a person with the given concerns. Return the product id and a brief explanation of why each product is suitable. Do not hallucinate or invent products or product ids that don't exist in the data. Output valid JSON matching the schema 
+        prompt = TEST_PROMPT or f"""Using the provided file of deals and the evidence, recommend three each of makeup, skincare, and haircare products for a person with the given concerns. Return the product id and a brief explanation of why each product is suitable. Do not hallucinate or invent products or product ids that don't exist in the data. Output valid JSON matching the schema 
         - Evidence: Named active ingredients (retinol etc.) or their synonyms are highest tier evidence. Marketing cues (hydrating, clarifying, barrier, etc.) are lower tier evidence.
         - Concerns: {query[0]} skin with {query[1]}, {query[2]} hair that is {query[3]}, and likes a {query[4]} makeup look
-        """
+        """ 
         client = genai.Client(api_key=self.api_key)
-        promos = cloud_storage.read_promos()
+        promos = TEST_PROMOS or cloud_storage.read_promos()
 
         with open("tmp.txt", "w") as file:
             file.write(promos)
 
-        myfile = client.files.upload(file="tmp.txt")
+        myfile = TEST_FILE or client.files.upload(file="tmp.txt")
         
+        contents = [prompt, myfile]
         try:
             response = client.models.generate_content(
-            model="gemini-2.5-flash", contents=[prompt, myfile],
+            model="gemini-2.5-flash", contents=contents,
             config = types.GenerateContentConfig(
             response_mime_type="application/json",
             response_schema= Preferences_Schema,
@@ -79,24 +80,24 @@ class AiBot():
         except UnboundLocalError:
             return "Empty/incorrect prompt provided to the AI"
 
-    def get_top_deals(self) -> str:
+    def get_top_deals(self, TEST_PROMPT=None, TEST_FILE=None, TEST_PROMOS=None) -> str:
         """
         Queries the AI for the top 10 best deals\n
         Args:
         - None
         """
-        prompt = f"""Identify the **top 10 best deals** on beauty products from the provided data. Respond with the product id and a brief explanation of why each product provides good value. Output valid JSON matching the provided schema. Avoid echoing the product name in the reason to buy. **Do not hallucinate or invent products or product ids that don't exist in the data.** Never invent product details. Always return exactly 10 distinct items."""
+        prompt = TEST_PROMPT or f"""Identify the **top 10 best deals** on beauty products from the provided data. Respond with the product id and a brief explanation of why each product provides good value. Output valid JSON matching the provided schema. Avoid echoing the product name in the reason to buy. **Do not hallucinate or invent products or product ids that don't exist in the data.** Never invent product details. Always return exactly 10 distinct items."""
         client = genai.Client(api_key=self.api_key)
-        promos = cloud_storage.read_promos()
+        promos = TEST_PROMOS or cloud_storage.read_promos()
 
         with open("tmp.txt", "w") as file:
             file.write(promos)
 
-        myfile = client.files.upload(file="tmp.txt")
-        
+        myfile = TEST_FILE or client.files.upload(file="tmp.txt")
+        contents =  [prompt, myfile]
         try:
             response = client.models.generate_content(
-            model="gemini-2.5-flash", contents=[prompt, myfile],
+            model="gemini-2.5-flash", contents=contents,
             config = types.GenerateContentConfig(
             response_mime_type="application/json",
             response_schema= TodaysDeals_Schema,
