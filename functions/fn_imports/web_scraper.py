@@ -49,7 +49,6 @@ class DealGenerator():
                         "list_price": float(lp),
                         "url": item.attrs["href"],
                         "discount": int(((float(lp)-float(sp))/float(lp))*100),
-                        "reason":""
                     }
                 promo_list.append(obj)
         
