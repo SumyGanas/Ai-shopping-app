@@ -60,6 +60,7 @@ Pygments==2.19.2
 PyJWT==2.10.1
 PySocks==1.7.1
 pytest==8.4.1
+pytest-mock
 python-dotenv==1.1.1
 PyYAML==6.0.2
 referencing==0.36.2

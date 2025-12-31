@@ -2,7 +2,7 @@
 import logging
 from firebase_functions import scheduler_fn
 from firebase_functions.options import MemoryOption
-from . import cloud_storage, fire_store
+import cloud_storage, fire_store
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
