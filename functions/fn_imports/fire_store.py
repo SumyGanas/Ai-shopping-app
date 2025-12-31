@@ -2,7 +2,7 @@ import logging, json
 import firebase_admin
 from firebase_admin import firestore
 from datetime import datetime, timezone, timedelta
-from . import web_scraper
+import web_scraper
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -64,16 +64,11 @@ class Cache():
         doc = doc_ref.get()
 
         if doc.exists:
-            doc_data = doc.to_dict()
-            if str(query) in doc_data:
-                return doc_data[str(query)]
+            doc_data = doc.to_dict() or {}
+            key = str(query)
+            if key in doc_data:
+                return doc_data[key]
         else:
-            # default_data = {
-            #     'created_at': str(self.todays_date),
-            #     query: {}
-            # }
-            # doc_ref.set(default_data)
-
             return False
 
 class Cache_Handler(Cache):
@@ -146,7 +141,7 @@ class Cache_Handler(Cache):
         promo_list = makeup+skincare+haircare
         return promo_list
 
-    def add_to_cache(self, deal_type: str, query: tuple[str]):
+    def add_to_cache(self, deal_type: str, query: tuple[str, str, str, str, str]):
         """
         adds new query data to the ai-response-cache
         """
@@ -197,6 +192,9 @@ class Promotions():
         doc_ref.collection(category).document(item_config["sku"]).set(product.to_dict())
 
     def __create_item_for_ai(self, item_config: dict) -> dict:
+        """
+        Returns a dictionary with relevant item information
+        """
         sale_item = {
             "sku": item_config["sku"],
             "name": item_config["name"],

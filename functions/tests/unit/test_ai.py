@@ -1,8 +1,6 @@
 """Unit test module"""
-import os, json, pytest
+import json, pytest
 from jsonschema import validate, ValidationError
-from unittest.mock import MagicMock
-from google.genai.types import GenerateContentResponse
 from dotenv import load_dotenv
 from fn_imports.ai import AiBot
 from fn_imports import ai as ai_module
@@ -11,7 +9,7 @@ load_dotenv()
 
 @pytest.fixture
 def promos():
-    with open("../local.test_promos.txt","r", encoding="utf-8") as file:
+    with open("local.test_promos.txt","r", encoding="utf-8") as file:
         promos = file.read()
     return promos
 
@@ -23,8 +21,8 @@ def load_json_schema(schema_path):
     with open(schema_path, 'r') as f:
         return json.load(f)
 
-pref_schema = load_json_schema("../schemas/pref_schema.json")
-td_schema = load_json_schema("../schemas/td_schema.json")
+pref_schema = load_json_schema("schemas/pref_schema.json")
+td_schema = load_json_schema("schemas/td_schema.json")
 
 
 @pytest.fixture

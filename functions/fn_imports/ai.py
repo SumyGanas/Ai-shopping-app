@@ -4,7 +4,7 @@ import tolerantjson as tjson
 from google import genai
 from pydantic import BaseModel, ConfigDict, RootModel
 from google.genai import types
-from . import cloud_storage
+import cloud_storage
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class AiBot():
         self.api_key = os.environ.get("GEMINI_API_KEY")
         self.model = "gemini-2.5-flash"
 
-    def __validate_json(self, text) -> str:
+    def __validate_json(self, text) -> str|None:
         """
         Validates the AI response's json schema
         """
@@ -43,17 +43,20 @@ class AiBot():
             return valid_json
         except tjson.parser.ParseError as e:
             logger.error(f"Error compiling response to json string: {e}")
+            return None
         except (ValueError, SyntaxError) as e:
             logger.error(f"Error cleaning json response from AI: {e}")
+            return None
+        
 
-    def get_pref_deals(self, query: tuple[str] | str, TEST_PROMPT=None, TEST_FILE=None, TEST_PROMOS=None) -> str:
+    def get_pref_deals(self, query: tuple[str,str,str,str,str], TEST_PROMPT=None, TEST_FILE=None, TEST_PROMOS=None) -> str:
         """
         Queries the AI for preference based sales or current best sales\n
         Args:
         - query: tuple for preferred_deals or str for todays_deals
         """
         
-        prompt = TEST_PROMPT or f"""Using the provided file of deals and the evidence, recommend three each of makeup, skincare, and haircare products for a person with the given concerns. Return the product id and a brief explanation of why each product is suitable. Do not hallucinate or invent products or product ids that don't exist in the data. Output valid JSON matching the schema 
+        prompt = TEST_PROMPT or f"""Using the provided file of product deals and the evidence, recommend three each of makeup, skincare, and haircare products for a person with the given concerns. Return the product id and a brief explanation of why each product is suitable. Do not hallucinate or invent products or product ids that don't exist in the data. Output valid JSON matching the schema 
         - Evidence: Named active ingredients (retinol etc.) or their synonyms are highest tier evidence. Marketing cues (hydrating, clarifying, barrier, etc.) are lower tier evidence.
         - Concerns: {query[0]} skin with {query[1]}, {query[2]} hair that is {query[3]}, and likes a {query[4]} makeup look
         """ 
@@ -76,9 +79,11 @@ class AiBot():
              ))
             
             clean_response =  self.__validate_json(response.text)
-            return clean_response
+            if clean_response:
+                return clean_response
         except UnboundLocalError:
             return "Empty/incorrect prompt provided to the AI"
+        return "Something went wrong, please try again"
 
     def get_top_deals(self, TEST_PROMPT=None, TEST_FILE=None, TEST_PROMOS=None) -> str:
         """
@@ -92,7 +97,6 @@ class AiBot():
 
         with open("tmp.txt", "w") as file:
             file.write(promos)
-
         myfile = TEST_FILE or client.files.upload(file="tmp.txt")
         contents =  [prompt, myfile]
         try:
@@ -104,6 +108,8 @@ class AiBot():
             system_instruction="""You are an expert deal analyzer that can combine different promotions and discounts to get the maximum value in a purchase."""
              ))
             clean_response = self.__validate_json(response.text)
-            return clean_response
+            if clean_response:
+                return clean_response
         except UnboundLocalError:
             return "Empty/incorrect prompt provided to the AI"
+        return "Something went wrong, please try again"

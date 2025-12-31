@@ -66,8 +66,10 @@ class DealGenerator():
             obj = item.select("div")[0].text + " " + item.select("div")[2].text     
             promo_list.append(obj)
         
-        pl = promo_list if len(promo_list) else []
-        return pl
+        if isinstance(promo_list, list):
+            return promo_list
+        return []
+    
     
     def __get_td_promos(self) -> list[str]:
         """
@@ -80,8 +82,9 @@ class DealGenerator():
             obj = item.select("div.LargeDealCard__headline")[0].text +" "+ item.select("div.LargeDealCard__subtitle")[0].text 
             promo_list.append(obj)
         
-        pl = promo_list if len(promo_list) else []
-        return pl
+        if isinstance(promo_list, list):
+            return promo_list
+        return []
     
     def __get_bmsm(self) -> list[str]:
         """
@@ -95,8 +98,10 @@ class DealGenerator():
             p1 = re.sub("Online only","",text)
             p2 = re.sub(r"\([^)]*?\)","",p1)   
             promo_list.append(p2)
-        pl = promo_list if len(promo_list) else []
-        return pl
+        if isinstance(promo_list, list):
+            return promo_list
+        return []
+    
     
     def get_sale_data(self, item_type: str) -> list[dict]:
         try:
