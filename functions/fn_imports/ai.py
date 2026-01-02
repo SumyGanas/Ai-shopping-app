@@ -4,7 +4,7 @@ import tolerantjson as tjson
 from google import genai
 from pydantic import BaseModel, ConfigDict, RootModel
 from google.genai import types
-import cloud_storage
+from . import cloud_storage
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
