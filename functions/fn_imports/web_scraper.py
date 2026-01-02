@@ -1,9 +1,9 @@
 """Parser bot"""
 import re
-import json
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from urllib3.exceptions import MaxRetryError
+from urllib.parse import urlparse, parse_qs
 
 class DealGenerator():
     """Contains methods to assist scraping brand pages"""
@@ -16,13 +16,13 @@ class DealGenerator():
         soup = BeautifulSoup(page.content, "html.parser")
         return soup
 
-    def __get_ulta_sales(self, item_type: str) -> list[dict]|None:
+    def __get_ulta_sales(self, item_category: str) -> list[dict]|None:
         """
         Returns a list of ulta makeup, skincare and haircare sales
         """ 
-        if item_type == "makeup":
+        if item_category == "makeup":
             url = "https://www.ulta.com/promotion/sale?category=makeup"
-        elif item_type == "skincare":
+        elif item_category == "skincare":
             url = "https://www.ulta.com/promotion/sale?category=skin-care"
         else:
             url = "https://www.ulta.com/promotion/sale?category=hair"
@@ -31,28 +31,53 @@ class DealGenerator():
         promo_list = []
         card = "li.ProductListingResults__productCard a"
         items = soup.select(card)
-        for i,item in enumerate(items):
+        for item in items:
+            if not isinstance(item, Tag):
+                continue
             item_type = item.select_one("div.ProductCard__image")
-            if item_type is not None and item_type.text != "Sponsored":
-                s = item.contents[0].select(
-                    "div.ProductPricing")[0].select(
-                        "span")[0].text
-                sp = re.search(r"\d+(?:\.\d+)?", s).group()
-                l = item.contents[0].select("div.ProductPricing")[0].select("span")[2].text
-                lp = re.search(r"\d+(?:\.\d+)?", l).group()
+            if item_type == None or item_type.text == "Sponsored":
+                continue
+            url = item.get("href")
+            sku_id = None
+            if url and isinstance(url, str):
+                parsed_url = urlparse(url)
+                query_params = parse_qs(parsed_url.query)
+                sku_id = query_params.get("sku", [None])[0]
+
+            first_child = next((child for child in item.children if isinstance(child, Tag)), None)
+            if not first_child:
+                continue
+            sp = None
+            lp = None
+            alt_text = "Unknown Product"
+            
+            img_tag = first_child.find("img")
+            if img_tag and isinstance(img_tag, Tag):
+                alt_text = img_tag.get("alt", "Unknown Product")
+            spans = first_child.select("div.ProductPricing span")
+            if len(spans) > 2:
+                s_text = spans[0].text.strip()
+                l_text = spans[2].text.strip()
+
+                if match_sp := re.search(r"\d+(?:\.\d+)?", s_text):
+                    sp = float(match_sp.group())
+                
+                if match_lp := re.search(r"\d+(?:\.\d+)?", l_text):
+                    lp = float(match_lp.group())  
+
+            if sp is not None and lp is not None and lp > 0:
                 obj = {
-                        "sku": soup.select(
-                            "li.ProductListingResults__productCard"
-                            )[i].attrs["data-sku-id"],
-                        "name": item.contents[0].find("img").attrs["alt"],
-                        "sale_price": float(sp),
-                        "list_price": float(lp),
-                        "url": item.attrs["href"],
-                        "discount": int(((float(lp)-float(sp))/float(lp))*100),
-                    }
+                    "sku": sku_id, 
+                    "name": alt_text,
+                    "sale_price": sp,
+                    "list_price": lp,
+                    "url": url,
+                    "discount": int(((lp - sp) / lp) * 100),
+                }
+
                 promo_list.append(obj)
         
-        pl = promo_list if len(promo_list) else ""
+        pl = promo_list if len(promo_list) else None
         return pl
 
     def __get_gwp(self) -> list[str]:
@@ -106,7 +131,10 @@ class DealGenerator():
     def get_sale_data(self, item_type: str) -> list[dict]:
         try:
             sale = self.__get_ulta_sales(item_type)
-            return sale
+            if sale:
+                return sale
+            else:
+                raise RuntimeError("Issue with beautiful soup instance")
         except (MaxRetryError, AttributeError) as exc:
             raise RuntimeError("Issue with beautiful soup instance") from exc
 
@@ -116,4 +144,7 @@ class DealGenerator():
         bmsm = self.__get_bmsm()
 
         return gwp + td + bmsm
-
+x = DealGenerator()
+data = x.get_promotional_data()
+with open("./tmp.txt","w") as file:
+    file.write(str(data))
