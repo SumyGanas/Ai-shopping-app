@@ -1,8 +1,8 @@
 import logging, json
 import firebase_admin
 from firebase_admin import firestore
-from datetime import datetime, timezone, timedelta
-import web_scraper
+from datetime import datetime, timezone
+from . import web_scraper
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
